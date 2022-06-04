@@ -238,7 +238,8 @@ class QYoutubeDownloadFormatDlg(QtGui.QDialog):
         
     def get_format(self):
         yft = self.youtube_format_tbl
-        return  _ydl_format_none if self.format_unsable else yft.item(yft.currentRow(), 0).text()
+        row = yft.currentRow()
+        return yft.item(row, 0).text() if row > 0 else _ydl_format_none
     
 class QYoutubeDownloader(QtGui.QWidget):
     def __init__(self):
