@@ -33,19 +33,26 @@ _youtube_tab_text = [
     "Setting"
 ]
 
-# https://stackoverflow.com/questions/28735459/how-to-validate-youtube-url-in-client-side-in-text-box
-_valid_youtube_url = re.compile("^(?:https?:\/\/)?(?:m\.|www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$")
-
-_find_format = re.compile('\w+', re.MULTILINE )
-_find_size = lambda x : x[x.rfind(' '):]
-_find_percent = re.compile('\d+.\d+\%', re.MULTILINE )
-
 _ydl_option_video_list = "--flat-playlist"
 _ydl_option_skip_download = "--skip-download"
 _ydl_option_extract_audio = "--extract-audio"
 _ydl_option_audio_format = "--audio-format"
 _ydl_option_encode_video = "--recode-video"
 _ydl_option_audio_quality = "--audio-quality"
+_ydl_option_output = "-o"
+_ydl_option_output_filename = "%(title)s-%(id)s.%(ext)s"
+_ydl_const_error = "ERROR"
+_ydl_const_exist = "already been downloaded"
+_ydl_const_exist_text = "Already exist"
+
+# https://stackoverflow.com/questions/28735459/how-to-validate-youtube-url-in-client-side-in-text-box
+_valid_youtube_url = re.compile("^(?:https?:\/\/)?(?:m\.|www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$")
+
+_find_format = re.compile("\w+", re.MULTILINE )
+_find_size = lambda x : x[x.rfind(' '):]
+_find_percent = re.compile("\d+.\d+\%", re.MULTILINE )
+_find_ydl_error = lambda x: x.strip() if x.find("ERROR:") >= 0 else None
+_file_exist = lambda x: True if x.find(_ydl_const_exist) >= 0 else False
 
 _ydl_audio_codec = [
     "best", 
@@ -292,7 +299,7 @@ class QYoutubeDownloader(QtGui.QWidget):
         QtGui.QFileDialog.ShowDirsOnly)
         if not path: return
         self.youtube_save_path.setText(path)
-        os.chdir(path)    
+        #os.chdir(path)    
         
     def youtube_video_tab_changed(self):
         pass
@@ -473,10 +480,11 @@ class QYoutubeDownloader(QtGui.QWidget):
         layout = QtGui.QFormLayout()
         
         self.youtube_path_tbl = QtGui.QTableWidget()
-        self.youtube_path_tbl.verticalHeader().hide()
-        self.youtube_path_tbl.setColumnCount(2)
+        #self.youtube_path_tbl.verticalHeader().hide()
+        self.youtube_path_tbl.setColumnCount(3)
         self.youtube_path_tbl.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem("URL"))
         self.youtube_path_tbl.setHorizontalHeaderItem(1, QtGui.QTableWidgetItem("Description"))
+        self.youtube_path_tbl.setHorizontalHeaderItem(2, QtGui.QTableWidgetItem("Status"))
         #self.youtube_path_tbl.setHorizontalHeaderItem(2, QtGui.QTableWidgetItem("End"))
 
         header = self.youtube_path_tbl.horizontalHeader()
@@ -607,23 +615,15 @@ class QYoutubeDownloader(QtGui.QWidget):
                             QtGui.QTableWidgetItem(v["url"]))
                         self.youtube_path_tbl.setItem(cur_row+k, 1, 
                             QtGui.QTableWidgetItem(v["desc"]))
+                        self.youtube_path_tbl.setItem(cur_row+k, 2, 
+                            QtGui.QTableWidgetItem(""))
             except Exception as e:
                 msg.message_box(str(e), msg.message_error)
                 return
-            '''
-            with open(file) as f:
-                videos = json.load(f)["videos"]
-                #print(urls["videos"])
-                cur_row = self.youtube_path_tbl.rowCount()
-                for k, v in enumerate(videos):
-                    print(k,v["url"])
-                    self.youtube_path_tbl.insertRow(cur_row+k)
-                    self.youtube_path_tbl.setItem(cur_row+k, 0, 
-                        QtGui.QTableWidgetItem(v["url"]))
-            '''
+
     def load_text(self):
-        
         pass
+
     def choose_global_download_format(self):
         nurl = self.youtube_path_tbl.rowCount()
         if nurl == 0: return
@@ -647,6 +647,8 @@ class QYoutubeDownloader(QtGui.QWidget):
         cur_row = self.youtube_path_tbl.rowCount()
         self.youtube_path_tbl.insertRow(cur_row)
         self.youtube_path_tbl.setItem(cur_row, 0, QtGui.QTableWidgetItem(""))
+        self.youtube_path_tbl.setItem(cur_row, 1, QtGui.QTableWidgetItem(""))
+        self.youtube_path_tbl.setItem(cur_row, 2, QtGui.QTableWidgetItem(""))
         
     def fetch_youtube_format(self):
         frm = fetch_youtube_format_from_url(
@@ -660,39 +662,69 @@ class QYoutubeDownloader(QtGui.QWidget):
             
         if self.process_multiple:
             self.multiple_download_progress.setValue(self.multiple_download_step)
-    
+
     def single_download_data_read(self):
-        data = str(self.process_single.readAll())
+        data = str(self.process_single.readAll(), 'utf-8')
+
+        if _find_ydl_error(data):
+            self.process_single_error = True
+            msg.message_box(data, msg.message_error)
+            return
+            
+        if _file_exist(data):
+            self.single_file_already_exist = True
+            msg.message_box(_ydl_const_exist_text, msg.message_normal)
+            return
+                        
         match = _find_percent.search(data)
         if match:
             self.single_download_step = int(float(match.group(0)[:-1]))
 
     def single_download_finished(self):
-        if (len(self.single_download_job_list) == 0):
-            self.enable_single_download_buttons()
-            self.single_download_progress.setValue(100)
-            self.single_download_timer.stop()
+        self.enable_single_download_buttons()
+        self.single_download_progress.setValue(100)
+        self.single_download_timer.stop()
+         
+        if not self.process_single_error and\
+           not self.single_file_already_exist:
             self.print_download_elasped()
-            self.process_single = None
-            return
+        self.process_single = None
          
     def multiple_download_data_read(self):
-        data = str(self.process_multiple.readAll())
+        data = str(self.process_multiple.readAll(), 'utf-8')
+        
+        if _find_ydl_error(data):
+            self.process_multiple_error = True
+            self.youtube_path_tbl.item(self.download_count, 0).setBackground(QtGui.QColor(247,79,83))
+            self.youtube_path_tbl.item(self.download_count, 2).setText("Error")
+            msg.message_box("URL: #%d\n%s"%(self.download_count,data), msg.message_error)
+            return
+            
+        if _file_exist(data):
+            self.youtube_path_tbl.item(self.download_count, 2).setText(_ydl_const_exist_text)
+            return
+            
         match = _find_percent.search(data)
         if match:
             self.multiple_download_step = int(float(match.group(0)[:-1]))
             
     def multiple_download_finished(self):
-        if (len(self.multiple_download_job_list) == 0):
-            self.youtube_path_tbl.item(self.download_count, 0).setBackground(QtGui.QColor(230,213,89))
+        if self.process_multiple_error or len(self.multiple_download_job_list) == 0:
             self.enable_multiple_download_buttons()
             self.multiple_download_progress.setValue(100)
             self.multiple_download_timer.stop()
-            self.print_download_elasped()
             self.process_multiple = None
+
+            if not self.process_multiple_error:
+                self.youtube_path_tbl.item(self.download_count, 0).setBackground(QtGui.QColor(230,213,89))
+                self.youtube_path_tbl.item(self.download_count, 2).setText("Finished")
+                self.global_message.appendPlainText("=> Miltiple Download Donw@")
+                self.print_download_elasped()
             return
             
         self.youtube_path_tbl.item(self.download_count, 0).setBackground(QtGui.QColor(230,213,89))
+        if self.youtube_path_tbl.item(self.download_count, 2).text() != _ydl_const_exist_text:
+            self.youtube_path_tbl.item(self.download_count, 2).setText("Finished")
         self.download_count += 1
         
         sublist = self.multiple_download_job_list[0]
@@ -734,12 +766,7 @@ class QYoutubeDownloader(QtGui.QWidget):
             pass
         
     def start_multiple_download(self):
-        #url = "https://youtu.be/1OmkiEdfpPI"
-        #url = self.youtube_url.text()
-        #match = _valid_youtube_url.search(url)
-        #if not match:
-        #    msg.message_box("Invalid URL", msg.message_error)
-        #    return
+
         number_of_url = self.youtube_path_tbl.rowCount()
         if number_of_url == 0: 
             msg.message_box("No URL exist!!", msg.message_normal)
@@ -752,35 +779,35 @@ class QYoutubeDownloader(QtGui.QWidget):
             
         if tab_text == get_multiple_tab_text():    
             id = self.multiple_mood_AV_button_group.checkedId()
-            
             fmt = self.global_download_format_btn.text()
+
             if fmt.find(_ydl_format_none) < 0:
                 arg_list.extend(["-f", re.search("\d+", fmt).group(0)])
-            else:
-                if id == 0: # audio only
-                    audio_codec = self.multiple_download_audio_codec_cmb.currentText()
-                    arg_list.extend([ _ydl_option_extract_audio,
-                                    _ydl_option_audio_format,
-                                    audio_codec])
-                                    
-                    if audio_codec != _ydl_best_audio_codec:
-                        arg_list.extend([ _ydl_option_audio_quality, 
-                                        self.multiple_download_audio_quality_cmb.currentText()])
-                
-                elif id == 1: # video
-                    if self.multiple_download_video_codec_cmb.currentIndex() > 0:
-                        arg_list.extend([ _ydl_option_encode_video,
-                                        self.multiple_download_video_codec_cmb.currentText()
-                                        ])
-            #save_folder = os.path.join(self.youtube_save_path.text(), "%(title)s-%(id)s.%(ext)s")
-            #arg_list.append(save_folder)
 
+            if id == 0: # audio only
+                audio_codec = self.multiple_download_audio_codec_cmb.currentText()
+                arg_list.extend([_ydl_option_extract_audio,
+                                 _ydl_option_audio_format,
+                                 audio_codec])
+                                
+                if audio_codec != _ydl_best_audio_codec:
+                    arg_list.extend([_ydl_option_audio_quality, 
+                                     self.multiple_download_audio_quality_cmb.currentText()])
+            
+            elif id == 1: # video
+                if self.multiple_download_video_codec_cmb.currentIndex() > 0:
+                    arg_list.extend([_ydl_option_encode_video,
+                                     self.multiple_download_video_codec_cmb.currentText()])
+
+            save_folder = os.path.join(self.youtube_save_path.text(), _ydl_option_output_filename)
+            arg_list.extend([_ydl_option_output, save_folder])
+ 
             self.multiple_download_job_list = []
             arg_list.append(' ')
             for k in range(number_of_url):
-                item = self.youtube_path_tbl.item(k,0)
-                item.setBackground(QtGui.QColor(255,255,255))
-                arg_list[-1] = item.text().strip()
+                self.youtube_path_tbl.item(k,0).setBackground(QtGui.QColor(255,255,255))
+                self.youtube_path_tbl.item(k,2).setText("")
+                arg_list[-1] = self.youtube_path_tbl.item(k,0).text().strip()
                 job = [arg_list[0], arg_list[1:]]
                 self.multiple_download_job_list.append(job)
             '''    
@@ -802,6 +829,7 @@ class QYoutubeDownloader(QtGui.QWidget):
             if dm == get_concurrent_download_text() or dm == get_sequential_download_text():
                 self.process_multiple = QtCore.QProcess(self)
                 self.process_multiple.setReadChannel(QtCore.QProcess.StandardOutput)
+                self.process_multiple.setProcessChannelMode(QtCore.QProcess.MergedChannels)
                 QtCore.QObject.connect(self.process_multiple, QtCore.SIGNAL("finished(int)"), self.multiple_download_finished)
                 QtCore.QObject.connect(self.process_multiple, QtCore.SIGNAL("readyRead()"), self.multiple_download_data_read)
             
@@ -820,6 +848,8 @@ class QYoutubeDownloader(QtGui.QWidget):
 
                 print(self.cmd_to_msg(sublist[0], sublist[1]))
                 self.download_count = 0
+                self.process_multiple_error = False
+                
                 try:
                     #self.global_message.appendPlainText(self.cmd_to_msg(sublist[0], sublist[1]))
                     self.process_multiple.start(sublist[0], sublist[1])
@@ -846,23 +876,23 @@ class QYoutubeDownloader(QtGui.QWidget):
             # format selected
             if self.choose_format_cmb.currentIndex() > 0:
                 arg_list.extend(['-f', self.choose_format_cmb.currentText()])
-            else:
-                id = self.mood_av_button_group.checkedId()
-                if id == 0: # audio only
-                    audio_codec = self.single_download_audio_codec_cmb.currentText()
-                    arg_list.extend([ _ydl_option_extract_audio,
-                                      _ydl_option_audio_format,
-                                      audio_codec])
-                                      
-                    if audio_codec != _ydl_best_audio_codec:
-                        arg_list.extend([ _ydl_option_audio_quality, 
-                                          self.single_download_audio_quality_cmb.currentText()])
-
-                elif id == 1: # video
-                    if self.single_download_video_codec_cmb.currentIndex() > 0:
-                        arg_list.extend([ _ydl_option_encode_video,
-                                          self.single_download_video_codec_cmb.currentText()
-                                        ])
+            
+            id = self.mood_av_button_group.checkedId()
+            
+            if id == 0: # audio only
+                audio_codec = self.single_download_audio_codec_cmb.currentText()
+                arg_list.extend([_ydl_option_extract_audio,
+                                 _ydl_option_audio_format,
+                                 audio_codec])
+                                  
+                if audio_codec != _ydl_best_audio_codec:
+                    arg_list.extend([_ydl_option_audio_quality, 
+                                     self.single_download_audio_quality_cmb.currentText()])
+            
+            elif id == 1: # video
+                if self.single_download_video_codec_cmb.currentIndex() > 0:
+                    arg_list.extend([_ydl_option_encode_video,
+                                     self.single_download_video_codec_cmb.currentText()])
 
             if url.find('list') > -1:
                 ret = msg.message_box("Do you want to download multiple videos?", msg.message_warning)
@@ -875,11 +905,12 @@ class QYoutubeDownloader(QtGui.QWidget):
             
             self.process_single = QtCore.QProcess(self)
             self.process_single.setReadChannel(QtCore.QProcess.StandardOutput)
+            self.process_single.setProcessChannelMode(QtCore.QProcess.MergedChannels)
             QtCore.QObject.connect(self.process_single, QtCore.SIGNAL("finished(int)"), self.single_download_finished)
             QtCore.QObject.connect(self.process_single, QtCore.SIGNAL("readyRead()"), self.single_download_data_read)
             
-            save_folder = os.path.join(self.youtube_save_path.text(), "%(title)s-%(id)s.%(ext)s")
-            arg_list.extend([save_folder, url.strip()])
+            save_folder = os.path.join(self.youtube_save_path.text(), _ydl_option_output_filename)
+            arg_list.extend([_ydl_option_output, save_folder, url.strip()])
             
             self.single_download_job_list=[[arg_list[0], arg_list[1:]]]
             
@@ -895,6 +926,8 @@ class QYoutubeDownloader(QtGui.QWidget):
             self.single_download_progress.setFormat("Download: %p%")
             self.disable_single_download_buttons()
             self.download_t1 = time.time()
+            self.process_single_error = False
+            self.single_file_already_exist = False
             
             print(self.cmd_to_msg(sublist[0], sublist[1]))
             
