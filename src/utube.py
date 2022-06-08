@@ -33,6 +33,9 @@ _youtube_tab_text = [
     "Setting"
 ]
 
+# https://stackoverflow.com/questions/28735459/how-to-validate-youtube-url-in-client-side-in-text-box
+_valid_youtube_url = re.compile("^(?:https?:\/\/)?(?:m\.|www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$")
+
 _ydl_option_video_list = "--flat-playlist"
 _ydl_option_skip_download = "--skip-download"
 _ydl_option_extract_audio = "--extract-audio"
@@ -44,15 +47,16 @@ _ydl_option_output_filename = "%(title)s-%(id)s.%(ext)s"
 _ydl_const_error = "ERROR"
 _ydl_const_exist = "already been downloaded"
 _ydl_const_exist_text = "Already exist"
-
-# https://stackoverflow.com/questions/28735459/how-to-validate-youtube-url-in-client-side-in-text-box
-_valid_youtube_url = re.compile("^(?:https?:\/\/)?(?:m\.|www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$")
+_ydl_const_filename = "Destination:"
 
 _find_format = re.compile("\w+", re.MULTILINE )
 _find_size = lambda x : x[x.rfind(' '):]
 _find_percent = re.compile("\d+.\d+\%", re.MULTILINE )
 _find_ydl_error = lambda x: x.strip() if x.find("ERROR:") >= 0 else None
 _file_exist = lambda x: True if x.find(_ydl_const_exist) >= 0 else False
+_find_filename = lambda x: x.split(_ydl_const_filename)[1].strip() if x.find(_ydl_const_filename) >= 0 else None
+
+_exception_msg = lambda e : "=> {0} : {1}".format(type(e).__name__, str(e))
 
 _ydl_audio_codec = [
     "best", 
@@ -665,7 +669,13 @@ class QYoutubeDownloader(QtGui.QWidget):
             self.multiple_download_progress.setValue(self.multiple_download_step)
 
     def single_download_data_read(self):
-        data = str(self.process_single.readAll(), 'utf-8')
+        try:
+            #data = str(self.process_single.readAll(), 'utf-8')
+            #data = str(self.process_single.readAll(), 'cp949') # Windows only
+            data = str(self.process_single.readLine(), 'cp949') # Windows only
+        except Exception as e:
+            print(_exception_msg(e))
+            return
 
         if _find_ydl_error(data):
             self.process_single_error = True
@@ -675,6 +685,14 @@ class QYoutubeDownloader(QtGui.QWidget):
         if _file_exist(data):
             self.single_file_already_exist = True
             msg.message_box(_ydl_const_exist_text, msg.message_normal)
+            return
+           
+        fn = _find_filename(data)
+        if fn:
+            fpath, fname = os.path.split(fn.strip())
+            print("=> File Path: %s"%fpath)
+            print("=> File Name: %s"%fname)
+            #self.global_message.appendPlainText("=> %s"%fn)
             return
                         
         match = _find_percent.search(data)
@@ -692,7 +710,13 @@ class QYoutubeDownloader(QtGui.QWidget):
         self.process_single = None
          
     def multiple_download_data_read(self):
-        data = str(self.process_multiple.readAll(), 'utf-8')
+        try:
+            #data = str(self.process_multiple.readAll(), 'utf-8')
+            #data = str(self.process_single.readAll(), 'cp949') # Windows only
+            data = str(self.process_single.readLine(), 'cp949') # Windows only            
+        except Exception as e:
+            print(_exception_msg(e), data)
+            return
         
         if _find_ydl_error(data):
             self.process_multiple_error = True
@@ -705,6 +729,14 @@ class QYoutubeDownloader(QtGui.QWidget):
             self.youtube_path_tbl.item(self.download_count, 2).setText(_ydl_const_exist_text)
             return
             
+        fn = _find_filename(data)
+        if fn:
+            fpath, fname = os.path.split(fn.strip())
+            print("=> File Path: %s"%fpath)
+            print("=> File Name: %s"%fname)
+            #self.global_message.appendPlainText("=> Filename: %s"%fn)
+            return
+
         match = _find_percent.search(data)
         if match:
             self.multiple_download_step = int(float(match.group(0)[:-1]))
@@ -763,8 +795,7 @@ class QYoutubeDownloader(QtGui.QWidget):
     def cancel_multiple_download(self):
         if self.multiple_download_method.currentText() == get_sequential_download_text():
             self.process_multiple.kill()
-        else:
-            pass
+            self.single_download_timer.stop()
         
     def start_multiple_download(self):
 
@@ -946,9 +977,8 @@ class QYoutubeDownloader(QtGui.QWidget):
         
         if tab_text == get_single_tab_text():
             self.process_single.kill()
-        elif tab_text == get_multiple_tab_text():
-            self.multiple_download_process.kill()
-    
+            self.single_download_timer.stop()
+        
     def cmd_to_msg(self, cmd, arg=""):
         if isinstance(cmd, (list,)): msg1 = ' '.join(cmd)
         elif isinstance(cmd, (str,)): msg1 = cmd
