@@ -306,9 +306,9 @@ def move_item_up(table):
             table.setCurrentCell(row-1,column)
         table.removeRow(row+1)        
 
-class QProcessProgressive(QProcess):
+class QProcessProgress(QProcess):
     def __init__(self, key):
-        super(QProcessProgressive, self).__init__()
+        super(QProcessProgress, self).__init__()
         self.key = key
         self.step = 0
         self.file_exist = False
@@ -332,7 +332,7 @@ class ProcessController(QObject):
         
         for k, _ in enumerate(self.job_list):
             key = self.key_formula%(k+1)
-            proc = QProcessProgressive(key)
+            proc = QProcessProgress(key)
             proc.setReadChannel(QProcess.StandardOutput)
             proc.setProcessChannelMode(QProcess.MergedChannels)
             proc.finished.connect(partial(self.check_finshed,key))
