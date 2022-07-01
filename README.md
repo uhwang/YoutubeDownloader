@@ -1,3 +1,3 @@
 # YoutubeDownloader
 Youtube Downloader with Youtube-dl
-![Single Download](/img/single-dn.png /img/multi-dn)
+![Single Download](/img/single-dn.png, /img/multi-dn)
