@@ -34,61 +34,62 @@ import subprocess as sp
 import datetime
 import time
 
-from PyQt4.QtCore import Qt, QObject, QProcess, QSize, QBasicTimer, pyqtSignal
-from PyQt4.QtGui import ( QApplication, 
-                          QWidget,
-                          QStyleFactory, 
-                          QDialog,
-                          QLabel, 
-                          QPushButton, 
-                          QLineEdit,
-                          QComboBox, 
-                          QCheckBox, 
-                          QRadioButton, 
-                          QTableWidget, 
-                          QTableWidgetItem, 
-                          QTabWidget,
-                          QProgressBar, 
-                          QPlainTextEdit, 
-                          QGridLayout, 
-                          QVBoxLayout, 
-                          QHBoxLayout, 
-                          QFormLayout, 
-                          QButtonGroup,
-                          QFileDialog, 
-                          QScrollArea,
-                          QColor, 
-                          QIcon, 
-                          QPixmap, 
-                          QIntValidator, 
-                          QFont,
-                          QMessageBox)
+#from PyQt4.QtCore import Qt, QObject, QProcess, QSize, QBasicTimer, pyqtSignal
+#from PyQt4.QtGui import ( QApplication, 
+#                          QWidget,
+#                          QStyleFactory, 
+#                          QDialog,
+#                          QLabel, 
+#                          QPushButton, 
+#                          QLineEdit,
+#                          QComboBox, 
+#                          QCheckBox, 
+#                          QRadioButton, 
+#                          QTableWidget, 
+#                          QTableWidgetItem, 
+#                          QTabWidget,
+#                          QProgressBar, 
+#                          QPlainTextEdit, 
+#                          QGridLayout, 
+#                          QVBoxLayout, 
+#                          QHBoxLayout, 
+#                          QFormLayout, 
+#                          QButtonGroup,
+#                          QFileDialog, 
+#                          QScrollArea,
+#                          QColor, 
+#                          QIcon, 
+#                          QPixmap, 
+#                          QIntValidator, 
+#                          QFont,
+#                          QMessageBox)
 
 
-#from PyQt5.QtCore import Qt, pyqtSignal, QObject, QProcess, QSize, QBasicTimer
-#from PyQt5.QtGui import QColor, QIcon, QPixmap, QIntValidator, QFont
-#from PyQt5.QtWidgets import ( QApplication, 
-#                              QWidget,
-#                              QStyleFactory, 
-#                              QDialog,
-#                              QLabel, 
-#                              QPushButton, 
-#                              QLineEdit,
-#							   QComboBox, 
-#                              QCheckBox, 
-#                              QRadioButton, 
-#							   QTableWidget, 
-#							   QTableWidgetItem, 
-#                              QTabWidget,
-#                              QProgressBar, 
-#                              QPlainTextEdit, 
-#							   QGridLayout, 
-#                              QVBoxLayout, 
-#                              QHBoxLayout, 
-#                              QFormLayout, 
-#                              QButtonGroup,
-#                              QFileDialog, 
-#                              QScrollArea)
+from PyQt5.QtCore import Qt, pyqtSignal, QObject, QProcess, QSize, QBasicTimer
+from PyQt5.QtGui import QColor, QIcon, QPixmap, QIntValidator, QFont
+from PyQt5.QtWidgets import ( QApplication, 
+                              QWidget,
+                              QStyleFactory, 
+                              QDialog,
+                              QLabel, 
+                              QPushButton, 
+                              QLineEdit,
+                              QComboBox, 
+                              QCheckBox, 
+                              QRadioButton, 
+                              QTableWidget, 
+                              QTableWidgetItem, 
+                              QTabWidget,
+                              QProgressBar, 
+                              QPlainTextEdit, 
+                              QGridLayout, 
+                              QVBoxLayout, 
+                              QHBoxLayout, 
+                              QFormLayout, 
+                              QButtonGroup,
+                              QFileDialog, 
+                              QScrollArea,
+                              QMessageBox)
 
 
 # =========================================================
@@ -676,11 +677,6 @@ class QYoutubeDownloader(QWidget):
         self.setWindowTitle("YDL")
         self.setWindowIcon(QIcon(QPixmap(icon_youtube.table)))
         self.show()
-    
-    #http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
-    def pretty_size(n,pow=0,b=1024,u='B',pre=['']+[p for p in 'KMGTPEZY']):
-        pow,n=min(int(log(max(n*b**pow,1),b)),len(pre)-1),n*b**pow
-        return "%%.%if %%s%%s"%abs(pow%(-pow-1))%(n/b**float(pow),pre[pow],u)
 
     def timerEvent(self, e):
     
@@ -1141,7 +1137,7 @@ class QYoutubeDownloader(QWidget):
                 filter="Json (*.json );;All files (*.*)")
         
         if file: 
-            #file = file[0] # uncomment this line for PyQt5
+            file = file[0] # uncomment this line for PyQt5
             path, fname = os.path.split(file)
             
             try:
