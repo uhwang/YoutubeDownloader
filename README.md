@@ -15,4 +15,4 @@ Same as single file download but multiple files.
 Concurrent Download
 You can download multiple files at a time as many as you want.
 
-[![Watch the video] (https://youtu.be/2mN8Hd0L1pg)
+[![YouTube Downloader](https://youtu.be/2mN8Hd0L1pg/0.jpg)](https://youtu.be/2mN8Hd0L1pg "YouTube Downloader")
