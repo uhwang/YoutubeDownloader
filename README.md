@@ -18,3 +18,5 @@ You can download multiple files at a time as many as you want.
 <div align="center">
   <a href="https://www.youtube.com/watch?v=2mN8Hd0L1pg"><img src="https://img.youtube.com/vi/2mN8Hd0L1pg/0.jpg" alt="IMAGE ALT TEXT"></a>
 </div>
+
+[![YouTube Downloader: Concurrent Download](https://img.youtube.com/vi/2mN8Hd0L1pg/0.jpg)](https://www.youtube.com/watch?v=2mN8Hd0L1pg)
