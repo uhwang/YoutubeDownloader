@@ -17,6 +17,8 @@
 from distutils.core import setup
 import py2exe
 import sys
+from glob import glob
+
 sys.argv.append('py2exe')
 
 #setup(windows=["encode.py"], options={"py2exe" : {"includes" : ["sip", "PyQt4", "youtube_dl"]}})
@@ -27,6 +29,9 @@ setup(
 	description='Youtube Downloader',
 	author='Uisang Hwang',
 	windows=[{"script": 'ydl.py', "icon_resources": [(0, "ydl.ico")]}], 
-	#options={'py2exe': {"dist_dir": "bin", "includes" : ["sip", "PyQt5"], "excludes":["TKinter", "numpy"]}} 
-	options={'py2exe': {"dist_dir": "bin", "includes" : ["sip", "PyQt4"], "excludes":["TKinter", "numpy"]}} 
+    data_files=[('platforms', glob(r'C:\Python36\Lib\site-packages\PyQt5\Qt5\plugins\platforms\qwindows.dll'))],
+	options={'py2exe': {"dist_dir": "bin", 
+              "includes" : ["sip", "PyQt5", "PyQt5.sip"], 
+              "excludes":["TKinter", "numpy"]}} 
+	#options={'py2exe': {"dist_dir": "bin", "includes" : ["sip", "PyQt4"], "excludes":["TKinter", "numpy"]}} 
 )
