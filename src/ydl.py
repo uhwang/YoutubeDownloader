@@ -88,8 +88,7 @@ from PyQt5.QtWidgets import ( QApplication,
                               QFormLayout, 
                               QButtonGroup,
                               QFileDialog, 
-                              QScrollArea,
-                              QMessageBox)
+                              QScrollArea)
 
 
 # =========================================================
@@ -677,6 +676,11 @@ class QYoutubeDownloader(QWidget):
         self.setWindowTitle("YDL")
         self.setWindowIcon(QIcon(QPixmap(icon_youtube.table)))
         self.show()
+    
+    #http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
+    def pretty_size(n,pow=0,b=1024,u='B',pre=['']+[p for p in 'KMGTPEZY']):
+        pow,n=min(int(log(max(n*b**pow,1),b)),len(pre)-1),n*b**pow
+        return "%%.%if %%s%%s"%abs(pow%(-pow-1))%(n/b**float(pow),pre[pow],u)
 
     def timerEvent(self, e):
     
@@ -1558,9 +1562,9 @@ def main():
     #print(QStyleFactory.keys())
     #app.setStyle(QStyleFactory.create(u'Motif'))
     #app.setStyle(QStyleFactory.create(u'CDE'))
-    app.setStyle(QStyleFactory.create(u'Plastique'))
+    #app.setStyle(QStyleFactory.create(u'Plastique'))
     #app.setStyle(QStyleFactory.create(u'Cleanlooks'))
-    #app.setStyle(QStyleFactory.create("Fusion"))
+    app.setStyle(QStyleFactory.create("Fusion"))
     ydl= QYoutubeDownloader()
     sys.exit(app.exec_())
     
