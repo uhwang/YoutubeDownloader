@@ -1143,9 +1143,9 @@ class QYoutubeDownloader(QWidget):
         file = QFileDialog.getOpenFileName(self, "Load JSON", 
                 directory=self.youtube_save_path.text(), 
                 filter="Json (*.json );;All files (*.*)")
+        file = file[0] # uncomment this line for PyQt5
         
         if file: 
-            file = file[0] # uncomment this line for PyQt5
             path, fname = os.path.split(file)
             
             try:
