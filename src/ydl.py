@@ -25,6 +25,10 @@
                 #from PyQt5.QtWidgets import QMessageBox
                 from PyQt4.QtGui import QMessageBox
 
+                def load_json
+                =============================================
+                file = file[0] # uncomment this line for PyQt5               
+
     Youtube DownLoader w/ PyQt4 & PyQt5
 '''
 
