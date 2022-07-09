@@ -15,6 +15,8 @@
                 w/ PyQt4 and PyQt5
                 
     07/09/22    Fix table event funcs
+    
+    07/09/22    Postprocess w/ FFMpeg cut video/audio
                 
     Note:       Change source code depending on PyQt Version 4/5
                 
@@ -73,7 +75,7 @@ import time
 
 
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QProcess, QSize, QBasicTimer
-from PyQt5.QtGui import QColor, QIcon, QPixmap, QIntValidator, QFont
+from PyQt5.QtGui import QColor, QIcon, QPixmap, QIntValidator, QFont, QFontMetrics
 from PyQt5.QtWidgets import ( QApplication, 
                               QWidget,
                               QStyleFactory, 
@@ -97,7 +99,9 @@ from PyQt5.QtWidgets import ( QApplication,
                               QFileDialog, 
                               QScrollArea,
                               QMessageBox,
-                              QHeaderView)
+                              QHeaderView,
+                              QButtonGroup,
+                              QGroupBox)
 
 from collections import OrderedDict
 from functools import partial
@@ -146,6 +150,15 @@ _ydl_option_encode_video    = "--recode-video"
 _ydl_option_audio_quality   = "--audio-quality"
 _ydl_option_output          = "-o"
 _ydl_option_output_filename = "%(title)s-%(id)s.%(ext)s"
+
+# --prefer-ffmpeg --postprocessor-arg "-ss 0 -t 5 out.mp4"
+_ydl_option_choose_ffmpeg   = "--prefer-ffmpeg"
+_ydl_option_ffmpeg_argument = "--postprocessor-args"
+_ydl_ffmpeg_start_time      = "-ss"
+_ydl_ffmpeg_duration        = "-t"
+_ydl_ffmpeg_qt_time_mask    = "99:99:99.99;-"
+_ydl_ffmpeg_qt_width_mask   = "888888888888"
+
 _ydl_const_error            = "ERROR"
 _ydl_const_exist            = "already been downloaded"
 _ydl_const_exist_text       = "Already exist"
@@ -161,6 +174,10 @@ _find_ydl_error = lambda x: x.strip() if x.find("ERROR:") >= 0 else None
 _file_exist     = lambda x: True if x.find(_ydl_const_exist) >= 0 else False
 _find_filename  = lambda x: x.split(_ydl_const_filename)[1] if x.find(_ydl_const_filename) >= 0 else None
 _exception_msg  = lambda e: "=> {0} : {1}".format(type(e).__name__, str(e))
+
+# from encode.py
+_check_time     = re.compile ( '([0-9]{2}):([0-9]{2}):([0-9]{2}).([0-9]{2})')
+_find_time      = _check_time
 
 _ydl_format_none   = "N/A"
 #_ydl_audio_quality = [ str(x) for x in range(10)]
@@ -180,7 +197,7 @@ _ydl_audio_codec = [
 _ydl_best_audio_codec = _ydl_audio_codec[0]
 
 _ydl_video_codec = [
-    "Best",
+    "None",
     "mp4",
     "flv",
     "ogg",
@@ -198,6 +215,11 @@ def get_sequential_download_text() : return _ydl_multiple_download_method[0]
 def get_concurrent_download_text() : return _ydl_multiple_download_method[1]
 def get_current_tab_text(tab) : tab.tabText(tab.currentIndex())
 
+def time_to_sec(t1):
+    t2 = _find_time.search(t1)
+    sec = 60*(int(t2.group(1))*60+int(t2.group(2)))+int(t2.group(3))+ float(t2.group(4))*.01
+    return sec
+    
 def get_video_count_from_youtube_list(url):
     if url.find('list') < 0: 
         return
@@ -277,6 +299,132 @@ def fetch_youtube_format_from_url(url, tbl):
             frm.append(info[0])
         return frm
 
+
+class Postprocess:
+    def __init__(self):
+        self.use_ffmpeg = False
+        self.use_time   = False
+        self.t1         = "" # Start => 00:00:00 (HH:MM:SS)
+        self.t2         = "" # End   => 00:00:00 (HH:MM:SS)
+        self.filename   = ""
+        
+    def get_args(self):
+        ff_args = list()
+        if self.use_time:
+            t1_sec = time_to_sec(self.t1)
+            t2_sec = time_to_sec(self.t2)
+            duration = t2_sec - t1_sec
+            ff_args.extend([_ydl_ffmpeg_start_time,
+                            "%f"%t1_sec,
+                            _ydl_ffmpeg_duration,
+                            "%f"%duration])
+        ff_args.append(self.filename)
+        print(ff_args)
+        return  ' '.join(ff_args)
+        
+    def __str__(self):
+        return  "Use FFMpeg: %s\n"\
+                "Use Time  : %s\n"\
+                "T1        : %s\n"\
+                "T2        : %s\n"%(self.use_ffmpeg, self.use_time, 
+                     self.t1, self.t2)
+
+class PostprocessSingleDownload(Postprocess):
+    def __init__(self):
+        super(PostprocessSingleDownload, self).__init__()
+        
+class PostprocessSingleDownloadDlg(QDialog):
+    def __init__(self, info):
+        super(PostprocessSingleDownloadDlg, self).__init__()
+        self.info = info
+        self.initUI(info)
+        print(info)
+        
+    def initUI(self, info):
+        layout = QFormLayout()
+        
+        self.use_ffmpeg_chk = QCheckBox("Use FFMpeg")
+        self.use_ffmpeg_chk.setChecked(info.use_ffmpeg)
+        self.use_ffmpeg_chk.stateChanged.connect(self.set_config_status)
+        
+        layout.addWidget(self.use_ffmpeg_chk)
+        
+        self.time_group = QGroupBox('Timed Encoding (HH:MM:SS.MS)')
+        self.time_group.setCheckable(True)
+        self.time_group.clicked.connect(self.timedencoding_state_changed)
+        
+        time_layout = QHBoxLayout()
+        self.timed_encoding_t1 = QLineEdit()
+        self.timed_encoding_t2 = QLineEdit()
+        self.timed_encoding_t1.setInputMask(_ydl_ffmpeg_qt_time_mask)
+        self.timed_encoding_t2.setInputMask(_ydl_ffmpeg_qt_time_mask)
+        font = QFont("Courier",11,True)
+        fm = QFontMetrics(font)
+        self.timed_encoding_t1.setFixedSize(fm.width(_ydl_ffmpeg_qt_width_mask), fm.height())
+        self.timed_encoding_t2.setFixedSize(fm.width(_ydl_ffmpeg_qt_width_mask), fm.height())
+        self.timed_encoding_t1.setFont(font)
+        self.timed_encoding_t2.setFont(font)
+
+        self.timed_encoding_t1.setText(info.t1)
+        self.timed_encoding_t2.setText(info.t2)
+        
+        time_layout.addWidget(QLabel('Start'))
+        time_layout.addWidget(self.timed_encoding_t1)
+        time_layout.addWidget(QLabel('End'))
+        time_layout.addWidget(self.timed_encoding_t2)
+        self.time_group.setLayout(time_layout)
+        self.time_group.setChecked(self.info.use_time)
+        
+        self.output_container = QWidget()
+        output_layout = QHBoxLayout(self.output_container)
+        output_layout.addWidget(QLabel("Output File"))
+        self.output_file = QLineEdit(info.filename)
+        output_layout.addWidget(self.output_file)
+        
+        user_layout = QHBoxLayout()
+        self.accept_btn = QPushButton("Accept")
+        self.reject_btn = QPushButton("Reject")
+        self.accept_btn.clicked.connect(self.accept)
+        self.reject_btn.clicked.connect(self.reject)
+        user_layout.addWidget(self.accept_btn)
+        user_layout.addWidget(self.reject_btn)
+        
+        layout.addWidget(self.time_group)
+        layout.addWidget(self.output_container)
+        layout.addRow(user_layout)
+        self.set_config_status()
+        
+        self.setLayout(layout)
+        self.setWindowTitle("FFMpeg Setting")
+    
+    def set_config_status(self):
+        if self.use_ffmpeg_chk.isChecked():
+            self.time_group.setEnabled(True)
+            self.output_container.setEnabled(True)
+            self.info.use_ffmpeg = True
+        else:
+            self.time_group.setEnabled(False)
+            self.output_container.setEnabled(False)
+            self.info.use_ffmpeg = False
+            
+    def timedencoding_state_changed(self):
+        if self.time_group.isChecked():
+            self.timed_encoding_t1.setEnabled(True)
+            self.timed_encoding_t2.setEnabled(True)
+            self.info.use_time = True
+        else:
+            self.timed_encoding_t1.setEnabled(False)
+            self.timed_encoding_t2.setEnabled(False)
+            self.info.use_time = False
+        
+    def get_t1(self):
+        return self.timed_encoding_t1.text()
+        
+    def get_t2(self):
+        return self.timed_encoding_t2.text()
+
+    def get_filename(self):
+        return self.output_file.text()
 #-------------------------------------------------------------------------------
 # Reference: 
 # https://stackoverflow.com/questions/50930792/pyqt-multiple-qprocess-and-output
@@ -683,6 +831,7 @@ def hms_string(sec_elapsed):
 class QYoutubeDownloader(QWidget):
     def __init__(self):
         super(QYoutubeDownloader, self).__init__()
+        self.single_download_ffmpeg_config = PostprocessSingleDownload()
         self.initUI()
 
     def initUI(self):
@@ -800,6 +949,8 @@ class QYoutubeDownloader(QWidget):
         pass
         
     def single_video_tab_UI(self):
+        import icon_setting
+        
         # single video download
         layout = QFormLayout()
         grid = QGridLayout()
@@ -844,9 +995,16 @@ class QYoutubeDownloader(QWidget):
         self.delete_all_btn.setToolTip("Delete all formats")
         # for connection see the definition of self.choose_format_cmb after group bottons
         
+        self.set_single_download_ffmpeg_config_btn = QPushButton()
+        self.set_single_download_ffmpeg_config_btn.setIcon(QIcon(QPixmap(icon_setting.table)))
+        self.set_single_download_ffmpeg_config_btn.setIconSize(QSize(24,24))
+        self.set_single_download_ffmpeg_config_btn.setToolTip("Single download setting")
+        self.set_single_download_ffmpeg_config_btn.clicked.connect(self.set_single_download_ffmpeg_config)
+
         grid_btn.addWidget(self.fetch_youtube_format_btn, 0, 0)
         grid_btn.addWidget(self.delete_btn, 0, 1)
         grid_btn.addWidget(self.delete_all_btn, 0, 2)
+        grid_btn.addWidget(self.set_single_download_ffmpeg_config_btn, 0,3)
 
         self.single_download_audio_codec_cmb = QComboBox()
         self.single_download_audio_codec_cmb.addItems(_ydl_audio_codec)
@@ -888,7 +1046,7 @@ class QYoutubeDownloader(QWidget):
 
         self.single_download_AV_codec_clicked()
         grid_option_btn.addLayout(button_layout, 1, 0, 1, 2)
-
+        
         self.choose_format_cmb = QComboBox()
         grid_option_btn.addWidget(self.choose_format_cmb, 3,2)
         
@@ -931,6 +1089,29 @@ class QYoutubeDownloader(QWidget):
         
         self.single_video_tab.setLayout(layout)
         
+    def set_single_download_ffmpeg_config(self):
+        dlg = PostprocessSingleDownloadDlg(self.single_download_ffmpeg_config)
+        res = dlg.exec_()
+
+        if res == QDialog.Accepted:
+            if self.single_download_ffmpeg_config.use_ffmpeg:
+                t1 = dlg.get_t1()
+                t2 = dlg.get_t2()
+                
+                match1 = _check_time.search(t1)
+                match2 = _check_time.search(t2)
+    
+                if not match1 or not match2:
+                    msg.message_box("Invalid time format(start or end)!", msg.message_warning)
+                    self.global_message.appendPlainText("=> Error\nT1 : %s\nT2 : %s"%(t1,t2))
+                    return
+                
+                self.single_download_ffmpeg_config.t1 = t1
+                self.single_download_ffmpeg_config.t2 = t2
+                self.single_download_ffmpeg_config.filename = dlg.get_filename()
+        else:
+            self.single_download_ffmpeg_config.use_ffmpeg = False
+            
     def direct_format_input(self):
         if self.direct_format_chk.isChecked():
             self.direct_format.setEnabled(True)
@@ -1139,9 +1320,10 @@ class QYoutubeDownloader(QWidget):
         file = QFileDialog.getOpenFileName(self, "Load JSON", 
                 directory=self.youtube_save_path.text(), 
                 filter="Json (*.json );;All files (*.*)")
+
+        file = file[0] # uncomment this line for PyQt5
         
         if file: 
-            file = file[0] # uncomment this line for PyQt5
             path, fname = os.path.split(file)
             
             try:
@@ -1500,6 +1682,11 @@ class QYoutubeDownloader(QWidget):
                         arg_list.extend([ _ydl_option_encode_video,
                                         self.single_download_video_codec_cmb.currentText()
                                         ])
+            # Postprocess downloaded file w/ FFMpeg
+            if self.single_download_ffmpeg_config.use_ffmpeg:
+                arg_list.extend([ _ydl_option_choose_ffmpeg, 
+                                  _ydl_option_ffmpeg_argument,
+                                  self.single_download_ffmpeg_config.get_args()])
     
             if url.find('list') > -1:
                 ret = msg.message_box("Do you want to download multiple videos?", msg.message_yesno)
