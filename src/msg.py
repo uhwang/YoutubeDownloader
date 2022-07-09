@@ -5,8 +5,8 @@
 
 '''
 
-#from PyQt5.QtWidgets import QMessageBox
-from PyQt4.QtGui import QMessageBox
+from PyQt5.QtWidgets import QMessageBox
+#from PyQt4.QtGui import QMessageBox
 
 message_type = ('normal', 'yesno', 'warning', 'error')
 
