@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
+    Youtube DownLoader w/ PyQt4 & PyQt5
+
     Author: Uisang Hwang
     
     History
@@ -11,6 +13,8 @@
     06/29/22    Youtube Downloader ver 0.1 
                 tested against Windows and Puppy Linux 
                 w/ PyQt4 and PyQt5
+                
+    07/09/22    Fix table event funcs
                 
     Note:       Change source code depending on PyQt Version 4/5
                 
@@ -24,12 +28,11 @@
                 =============================================
                 #from PyQt5.QtWidgets import QMessageBox
                 from PyQt4.QtGui import QMessageBox
-
-                def load_json
+                
+                QTableWidget
                 =============================================
-                file = file[0] # uncomment this line for PyQt5               
+                setResizeMode (PyQt4) --> setSectionResizeMode s(PyQt5)
 
-    Youtube DownLoader w/ PyQt4 & PyQt5
 '''
 
 import re
@@ -92,12 +95,10 @@ from PyQt5.QtWidgets import ( QApplication,
                               QFormLayout, 
                               QButtonGroup,
                               QFileDialog, 
-                              QScrollArea)
+                              QScrollArea,
+                              QMessageBox,
+                              QHeaderView)
 
-
-# =========================================================
-#                  YOUTUBE DOWNLOADER
-# =========================================================
 from collections import OrderedDict
 from functools import partial
 
@@ -310,6 +311,34 @@ def move_item_up(table):
             table.setCurrentCell(row-1,column)
         table.removeRow(row+1)        
 
+def delete_all_item(table, format_cmb=None):
+    
+    for i in reversed(range(table.rowCount())):
+        table.removeRow(i)
+    table.setRowCount(0)
+    
+    if format_cmb != None: 
+        format_cmb.clear()
+    
+def delete_item(table, format_cmb=None):
+
+    row = table.currentRow()
+    row_count = table.rowCount()
+    
+    if row_count == 0: return
+    
+    if row_count == 1: delete_all_item(table, format_cmb)
+    else:
+        column = table.currentColumn();
+        for i in range(table.columnCount()):
+            table.setItem(row,i,table.takeItem(row+1,i))
+            table.setCurrentCell(row,column)
+        table.removeRow(row+1)
+        table.setRowCount(row_count-1)
+        
+    if format_cmb != None:
+        format_cmb.removeItem(row+1)
+        
 class QProcessProgress(QProcess):
     def __init__(self, key):
         super(QProcessProgress, self).__init__()
@@ -559,7 +588,7 @@ class QYoutubeDownloadFormatDlg(QDialog):
         url_layout = QHBoxLayout()
         url_layout.addWidget(QLabel("URL #"))
         self.url_cmb = QComboBox()
-        self.url_cmb.addItems([str(x) for x in range(url_table.rowCount())])
+        self.url_cmb.addItems([str(x+1) for x in range(url_table.rowCount())])
         url_layout.addWidget(self.url_cmb)
         
         self.youtube_format_tbl = QTableWidget()
@@ -573,12 +602,13 @@ class QYoutubeDownloadFormatDlg(QDialog):
         self.youtube_format_tbl.setHorizontalHeaderItem(5, QTableWidgetItem("Type"))
 
         header = self.youtube_format_tbl.horizontalHeader()
-        #header.setResizeMode(0, QHeaderView.ResizeToContents)
-        #header.setResizeMode(1, QHeaderView.ResizeToContents)
-        #header.setResizeMode(2, QHeaderView.ResizeToContents)        
-        #header.setResizeMode(3, QHeaderView.ResizeToContents)
-        #header.setResizeMode(4, QHeaderView.ResizeToContents)        
-
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)        
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)        
+        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)        
+        
         ans_layout = QGridLayout()
         self.fetch_youtube_format_btn = QPushButton('Fetch : Format Retrieve')
         self.fetch_youtube_format_btn.clicked.connect(self.fetch_youtube_format)
@@ -627,6 +657,7 @@ class QYoutubeDownloadFormatDlg(QDialog):
         self.accept()
         
     def fetch_youtube_format(self):
+        delete_all_item(self.youtube_format_tbl, None)
         url = self.url_table.item(self.url_cmb.currentIndex(),0).text()
         fetch_youtube_format_from_url(url, self.youtube_format_tbl)
         
@@ -694,18 +725,6 @@ class QYoutubeDownloader(QWidget):
         if self.process_multiple:
             self.multiple_download_progress.setValue(self.multiple_download_step)
     
-    def cmd_to_msg(self, cmd, arg=""):
-        if isinstance(cmd, (list,)): msg1 = ' '.join(cmd)
-        elif isinstance(cmd, (str,)): msg1 = cmd
-        else: msg1 = "Invalid cmd type: %s"%type(cmd)
-        
-        if isinstance(arg, (list,)): msg2 = ' '.join(arg)
-        elif isinstance(arg, (str,)): msg2 = arg
-        else: msg2 = "Invalid arg type: %s"%type(arg)
-        
-        return "=> %s %s"%(msg1, msg2)
-        
-
     def clear_global_message(self):
         self.global_message.clear()
         
@@ -798,12 +817,13 @@ class QYoutubeDownloader(QWidget):
         self.youtube_format_tbl.setHorizontalHeaderItem(4, QTableWidgetItem("Size"))
         self.youtube_format_tbl.setHorizontalHeaderItem(5, QTableWidgetItem("Type"))
 
-        #header = self.youtube_format_tbl.horizontalHeader()
-        #header.setResizeMode(0, QHeaderView.ResizeToContents)
-        #header.setResizeMode(1, QHeaderView.ResizeToContents)
-        #header.setResizeMode(2, QHeaderView.ResizeToContents)        
-        #header.setResizeMode(3, QHeaderView.ResizeToContents)
-        #header.setResizeMode(4, QHeaderView.ResizeToContents)
+        header = self.youtube_format_tbl.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)        
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
         
         grid_btn = QGridLayout()
         self.fetch_youtube_format_btn = QPushButton('', self)
@@ -816,14 +836,14 @@ class QYoutubeDownloader(QWidget):
         self.delete_btn.setIcon(QIcon(QPixmap(icon_delete_url.table)))
         self.delete_btn.setIconSize(QSize(24,24))
         self.delete_btn.setToolTip("Delete a format")
-        self.delete_btn.clicked.connect(self.delete_item)
+        # for connection see the definition of self.choose_format_cmb after group bottons
         
         self.delete_all_btn = QPushButton('', self)
         self.delete_all_btn.setIcon(QIcon(QPixmap(icon_trash_url.table)))
         self.delete_all_btn.setIconSize(QSize(24,24))
         self.delete_all_btn.setToolTip("Delete all formats")
-        self.delete_all_btn.clicked.connect(self.delete_all_item)
-
+        # for connection see the definition of self.choose_format_cmb after group bottons
+        
         grid_btn.addWidget(self.fetch_youtube_format_btn, 0, 0)
         grid_btn.addWidget(self.delete_btn, 0, 1)
         grid_btn.addWidget(self.delete_all_btn, 0, 2)
@@ -872,6 +892,9 @@ class QYoutubeDownloader(QWidget):
         self.choose_format_cmb = QComboBox()
         grid_option_btn.addWidget(self.choose_format_cmb, 3,2)
         
+        self.delete_btn.clicked.connect(partial(delete_item, self.youtube_format_tbl, self.choose_format_cmb))
+        self.delete_all_btn.clicked.connect(partial(delete_all_item, self.youtube_format_tbl, self.choose_format_cmb))
+
         self.direct_format_chk = QCheckBox("User Format")
         self.direct_format_chk.stateChanged.connect(self.direct_format_input)
         
@@ -946,34 +969,7 @@ class QYoutubeDownloader(QWidget):
                 if self.youtube_tabs.tabText(self.youtube_tabs.currentIndex()) ==\
                 get_single_tab_text() else self.youtube_path_tbl
         
-    def delete_all_item(self):
-        table = self.get_current_youtube_table()
-        
-        for i in reversed(range(table.rowCount())):
-            table.removeRow(i)
-        table.setRowCount(0)
-        
-        self.choose_format_cmb.clear()
-        
-    def delete_item(self):
-        table = self.get_current_youtube_table()
-        row = table.currentRow()
-        row_count = table.rowCount()
-        
-        if row_count == 0: return
-        
-        if row_count == 1: self.delete_all_item()
-        else:
-            column = table.currentColumn();
-            for i in range(table.columnCount()):
-                table.setItem(row,i,table.takeItem(row+1,i))
-                table.setCurrentCell(row,column)
-            table.removeRow(row+1)
-            table.setRowCount(row_count-1)
-            
-        if table == self.youtube_format_tbl:
-            self.choose_format_cmb.removeItem(row+1)
-        
+
     def multiple_video_tab_UI(self):
         import icon_arrow_down
         import icon_arrow_up
@@ -1009,13 +1005,13 @@ class QYoutubeDownloader(QWidget):
         self.delete_btn.setIcon(QIcon(QPixmap(icon_delete_url.table)))
         self.delete_btn.setIconSize(QSize(24,24))
         self.delete_btn.setToolTip("Delete a URL")
-        self.delete_btn.clicked.connect(self.delete_item)
+        self.delete_btn.clicked.connect(partial(delete_item, self.youtube_path_tbl, None))
         
         self.delete_all_btn = QPushButton('', self)
         self.delete_all_btn.setIcon(QIcon(QPixmap(icon_trash_url.table)))
         self.delete_all_btn.setIconSize(QSize(24,24))
         self.delete_all_btn.setToolTip("Delete All URLs")
-        self.delete_all_btn.clicked.connect(self.delete_all_item)
+        self.delete_all_btn.clicked.connect(partial(delete_all_item, self.youtube_path_tbl, None))
 
         grid_table_btn.addWidget(self.add_url_btn, 0, 0)
         grid_table_btn.addWidget(self.move_url_up_btn, 0, 1)
@@ -1143,9 +1139,9 @@ class QYoutubeDownloader(QWidget):
         file = QFileDialog.getOpenFileName(self, "Load JSON", 
                 directory=self.youtube_save_path.text(), 
                 filter="Json (*.json );;All files (*.*)")
-        file = file[0] # uncomment this line for PyQt5
         
         if file: 
+            file = file[0] # uncomment this line for PyQt5
             path, fname = os.path.split(file)
             
             try:
@@ -1199,6 +1195,8 @@ class QYoutubeDownloader(QWidget):
     def fetch_youtube_format(self):
                 
         self.global_message.appendPlainText("=> Fetch video formats")
+        delete_all_item(self.youtube_format_tbl, self.choose_format_cmb)
+        
         frm = fetch_youtube_format_from_url(
             self.youtube_url.text(),
             self.youtube_format_tbl)
