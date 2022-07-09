@@ -180,7 +180,7 @@ _ydl_audio_codec = [
 _ydl_best_audio_codec = _ydl_audio_codec[0]
 
 _ydl_video_codec = [
-    "None",
+    "Best",
     "mp4",
     "flv",
     "ogg",
