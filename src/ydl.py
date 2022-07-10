@@ -9,14 +9,12 @@
     6/02/22     FFMpeg     => self.process.setReadChannel(QtCore.QProcess.StandardError)
                 Youtube-dl => self.process.setReadChannel(QtCore.QProcess.StandardOutput) 
                 Download a single video from youtube
-                
     06/29/22    Youtube Downloader ver 0.1 
                 tested against Windows and Puppy Linux 
                 w/ PyQt4 and PyQt5
-                
     07/09/22    Fix table event funcs
-    
     07/09/22    Postprocess w/ FFMpeg cut video/audio
+    07/10/22    Exception in case of no internet
                 
     Note:       Change source code depending on PyQt Version 4/5
                 
@@ -144,6 +142,8 @@ _ydl_color_file_exist = QColor(158,248,160)
 _ydl_color_finished   = QColor(230,213,89)
 _ydl_color_white      = QColor(255,255,255)
 
+_ydl_option_timeout_duration= "20" # secs
+_ydl_option_socket_timeout  = "--socket-timeout"
 _ydl_option_video_list      = "--flat-playlist"
 _ydl_option_skip_download   = "--skip-download"
 _ydl_option_extract_audio   = "--extract-audio"
@@ -175,7 +175,13 @@ _ydl_download_finish = 0x02
 
 _find_format     = re.compile('\w+', re.MULTILINE )
 _find_percent    = re.compile('\d+.\d+\%', re.MULTILINE )
-_find_size       = lambda x: x[x.rfind(' '):]
+_find_digit      = re.compile('\d+')
+_find_bitrate    = re.compile('\d+[kK]')
+_find_error      = re.compile("%s|%s"%(_ydl_const_warning, _ydl_const_error), re.MULTILINE)
+
+# 936.10KiB  1.07MiB  18.07MiB  GiB
+_find_size       = re.compile("\d*\.?\d*[KMG]iB")
+_find_file_size  = lambda x: _find_size.search(x)
 _find_ydl_error  = lambda x: x.strip() if x.find(_ydl_const_error) >= 0 else None
 _find_ydl_warning= lambda x: x.strip() if x.find(_ydl_const_warning) >= 0 else None
 _file_exist      = lambda x: True if x.find(_ydl_const_exist) >= 0 else False
@@ -230,48 +236,74 @@ def time_to_sec(t1):
     sec = 60*(int(t2.group(1))*60+int(t2.group(2)))+int(t2.group(3))+ float(t2.group(4))*.01
     return sec
     
-def get_video_count_from_youtube_list(url):
-    if url.find('list') < 0: 
-        return
+#def get_video_count_from_youtube_list(url):
+#    if url.find('list') < 0: 
+#        return
+#
+#    cmd=[ 'youtube-dl', 
+#          _ydl_option_socket_timeout, 
+#          _ydl_option_timeout_duration,
+#          _ydl_option_video_list, url]
+#          
+#    try:
+#        proc = sp.Popen(cmd, stdout=sp.PIPE, stderr = sp.STDOUT)
+#    except Exception as e:
+#        pmsg.appendPlainText("=> Fetch List\n=> Error: %s"%str(e))
+#        msg.message_box(str(e), msg.message_error)
+#        return None
+#        
+#    output = proc.communicate()[0]
+#    output = output.decode('utf-8')
+#
+#    # output is a long stream characters
+#    if _find_error.search(output):
+#        pmsg.appendPlainText("=> Fetch list\n=>%s\n"%output)
+#        msg.message_box("Can't get video list!\nYou might have network problem\nCheck message", msg.message_error)
+#        return None
+#        
+#    match = re.search("\d+ videos", output, re.MULTILINE)
+#    count = None
+#    if match:
+#        count = int(match.group(0).split(' ')[0])
+#    return count
 
-    cmd=['youtube-dl',  _ydl_option_video_list, url]
-    proc = sp.Popen(cmd, stdout=sp.PIPE, stderr = sp.PIPE)
-    output = proc.communicate()[0]
-    output = output.decode('utf-8')
-
-    match = re.search("\d+ videos", output, re.MULTILINE)
-    if match:
-        return int(match.group(0).split(' ')[0])
-    return None
-
-def get_youtube_formats(url, skip_comment=3):
-    cmd=['youtube-dl',  '-F', url]
+def get_youtube_formats(url, pmsg=None):
+    cmd=[ 'youtube-dl',
+          _ydl_option_socket_timeout, 
+          _ydl_option_timeout_duration,
+          '-F', url]
     
     try:
-        proc = sp.Popen(cmd, stdout=sp.PIPE, stderr = sp.PIPE)
+        # https://docs.python.org/3/library/subprocess.html
+        # If you wish to capture and combine both streams into one, 
+        # use stdout=PIPE and stderr=STDOUT instead of capture_output.
+        # youtube-dl emits error and warning to stderr
+        proc = sp.Popen(cmd, stdout=sp.PIPE, stderr = sp.STDOUT)
     except Exception as e:
-        msg.message_box(str(e), msg.message_erro)
+        pmsg.appendPlainText("=> Fetch formats\n=> Error: %s"%str(e))
+        msg.message_box(str(e), msg.message_error)
         return None
     	
     output = proc.communicate()[0]
-    
-    #print(output)
-    # fail to get formats 
-    #if output.returncode:
-    #    print("failed to get youtube video/audio formats")
-    #    return None
-    
     # http:#stackoverflow.com/questions/606191/convert-bytes-to-a-python-string
     output = output.decode('utf-8')
+
+    # output is a long stream characters
+    if _find_error.search(output):
+        pmsg.appendPlainText(output)
+        msg.message_box("Can't fetch formats\nYou might have network problem\nCheck message", msg.message_error)
+        return None
+
+    # output is a list of strings
     output = output.split('\n')
     
     # count commnet lines
     skip_comment = 0
     for o in output:
-        if o[0:o.find(' ')].isdigit()
+        if _find_digit.search(o[0:o.find(' ')]):
             break
         skip_comment += 1
-        
+     
     formats = output[skip_comment:]
     del proc
     
@@ -280,17 +312,20 @@ def get_youtube_formats(url, skip_comment=3):
 def get_youtube_format_from_formats(format):
 
     e = _find_format.findall(format)
-    size = _find_size(format)
-    
+    filesize = _find_file_size(format)
+    bitrate = _find_bitrate.search(format)
+
     if len(e) < 1: return None
     
     if format.find('audio') > -1:
-        return [e[0], e[1], e[2], e[5], size, 'audio only']
+        fm = [ e[0], e[1], e[2], bitrate[0], filesize[0], 'audio only']
     else:
-        return [e[0], e[1], e[2], e[4], size, 
-                'video only' if format.find('video')>-1 else "video"]
-  
-def fetch_youtube_format_from_url(url, tbl):
+        fm = [ e[0], e[1], e[2], bitrate[0], 
+               filesize[0] if filesize else "best" if format.find("best")>-1 else "N/A",
+               'video only' if format.find('video only')>-1 else "video"]
+    return fm
+    
+def fetch_youtube_format_from_url(url, tbl, pmsg=None):
     
         if not _valid_youtube_url.search(url):
             msg.message_box("Invalid URL", msg.message_error)
@@ -299,8 +334,8 @@ def fetch_youtube_format_from_url(url, tbl):
         if url == '':
             return None
         
-        formats = get_youtube_formats(url)
-        if formats is None: return
+        formats = get_youtube_formats(url, pmsg)
+        if formats == None: return
         
         frm = ["None"]
         
@@ -320,6 +355,7 @@ def fetch_youtube_format_from_url(url, tbl):
 
 class Postprocess:
     def __init__(self):
+        self.use_ffmpeg = False
         self.bypass_mkv = False
         self.use_time   = False
         self.t1         = "" # Start => 00:00:00 (HH:MM:SS)
@@ -731,8 +767,9 @@ class ProcessTracker(QDialog):
         super(ProcessTracker, self).closeEvent(evnt)
             
 class QYoutubeDownloadFormatDlg(QDialog):
-    def __init__(self, url_table):
+    def __init__(self, url_table, msg):
         super(QYoutubeDownloadFormatDlg, self).__init__()
+        self.msg = msg
         self.initUI(url_table)
         
     def initUI(self, url_table):
@@ -813,7 +850,7 @@ class QYoutubeDownloadFormatDlg(QDialog):
     def fetch_youtube_format(self):
         delete_all_item(self.youtube_format_tbl, None)
         url = self.url_table.item(self.url_cmb.currentIndex(),0).text()
-        fetch_youtube_format_from_url(url, self.youtube_format_tbl)
+        fetch_youtube_format_from_url(url, self.youtube_format_tbl, self.msg)
         
     def get_format(self):
         fmt = self.direct_format.text()
@@ -1359,7 +1396,7 @@ class QYoutubeDownloader(QWidget):
     def choose_global_download_format(self):
         nurl = self.youtube_path_tbl.rowCount()
         if nurl == 0: return
-        format_dlg = QYoutubeDownloadFormatDlg(self.youtube_path_tbl)
+        format_dlg = QYoutubeDownloadFormatDlg(self.youtube_path_tbl, self.global_message)
         ret = format_dlg.exec_()
         if ret == 1:
             fmt = format_dlg.get_format()
@@ -1390,14 +1427,15 @@ class QYoutubeDownloader(QWidget):
         
         frm = fetch_youtube_format_from_url(
             self.youtube_url.text(),
-            self.youtube_format_tbl)
+            self.youtube_format_tbl,
+            self.global_message)
         if frm:
             self.choose_format_cmb.addItems(frm)
     
     def single_download_data_read(self):
         try:
             #data = str(self.process_single.readAll(), 'utf-8')
-            data = str(self.process_single.readLine(), 'cp949') # Windows only
+            data = str(self.process_single.readLine(), 'cp949') # Windows 
         except Exception as e:
             self.global_message.appendPlainText(_exception_msg(e))
             return
