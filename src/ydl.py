@@ -34,7 +34,7 @@
                 QTableWidget
                 =============================================
                 setResizeMode (PyQt4) --> setSectionResizeMode s(PyQt5)
-
+                
 '''
 
 import re
@@ -117,6 +117,8 @@ import icon_delete_url
 import icon_trash_url
 import icon_json
 import icon_save
+import icon_file_open
+
 import json
 import msg
 
@@ -154,11 +156,15 @@ _ydl_option_output_filename = "%(title)s-%(id)s.%(ext)s"
 # --prefer-ffmpeg --postprocessor-arg "-ss 0 -t 5 out.mp4"
 _ydl_option_choose_ffmpeg   = "--prefer-ffmpeg"
 _ydl_option_ffmpeg_argument = "--postprocessor-args"
+#_ydl_option_choose_ffmpeg   = "--external-downloader"
+#_ydl_option_ffmpeg_argument = "--external-downloader-args"
+_ydl_option_postprocessor   = "ffmpeg"
 _ydl_ffmpeg_start_time      = "-ss"
 _ydl_ffmpeg_duration        = "-t"
 _ydl_ffmpeg_qt_time_mask    = "99:99:99.99;-"
 _ydl_ffmpeg_qt_width_mask   = "888888888888"
 
+_ydl_const_warning          = "WARNING"
 _ydl_const_error            = "ERROR"
 _ydl_const_exist            = "already been downloaded"
 _ydl_const_exist_text       = "Already exist"
@@ -167,13 +173,14 @@ _ydl_const_filename         = "Destination:"
 _ydl_download_start = 0x01
 _ydl_download_finish = 0x02
 
-_find_format    = re.compile('\w+', re.MULTILINE )
-_find_percent   = re.compile('\d+.\d+\%', re.MULTILINE )
-_find_size      = lambda x: x[x.rfind(' '):]
-_find_ydl_error = lambda x: x.strip() if x.find("ERROR:") >= 0 else None
-_file_exist     = lambda x: True if x.find(_ydl_const_exist) >= 0 else False
-_find_filename  = lambda x: x.split(_ydl_const_filename)[1] if x.find(_ydl_const_filename) >= 0 else None
-_exception_msg  = lambda e: "=> {0} : {1}".format(type(e).__name__, str(e))
+_find_format     = re.compile('\w+', re.MULTILINE )
+_find_percent    = re.compile('\d+.\d+\%', re.MULTILINE )
+_find_size       = lambda x: x[x.rfind(' '):]
+_find_ydl_error  = lambda x: x.strip() if x.find(_ydl_const_error) >= 0 else None
+_find_ydl_warning= lambda x: x.strip() if x.find(_ydl_const_warning) >= 0 else None
+_file_exist      = lambda x: True if x.find(_ydl_const_exist) >= 0 else False
+_find_filename   = lambda x: x.split(_ydl_const_filename)[1] if x.find(_ydl_const_filename) >= 0 else None
+_exception_msg   = lambda e: "=> {0} : {1}".format(type(e).__name__, str(e))
 
 # from encode.py
 _check_time     = re.compile ( '([0-9]{2}):([0-9]{2}):([0-9]{2}).([0-9]{2})')
@@ -197,7 +204,7 @@ _ydl_audio_codec = [
 _ydl_best_audio_codec = _ydl_audio_codec[0]
 
 _ydl_video_codec = [
-    "None",
+    "best", # -f 'bestvideo[ext=mp4]+bestaudio[ext=m4a]'
     "mp4",
     "flv",
     "ogg",
@@ -210,6 +217,9 @@ _ydl_multiple_download_method = [
     "Sequential",
     "Concurrent"
 ]
+
+def get_best_codec_name(): return _ydl_video_codec[0]
+def get_mkv_codec_name(): return _ydl_video_codec[5]
 
 def get_sequential_download_text() : return _ydl_multiple_download_method[0]
 def get_concurrent_download_text() : return _ydl_multiple_download_method[1]
@@ -254,6 +264,14 @@ def get_youtube_formats(url, skip_comment=3):
     # http:#stackoverflow.com/questions/606191/convert-bytes-to-a-python-string
     output = output.decode('utf-8')
     output = output.split('\n')
+    
+    # count commnet lines
+    skip_comment = 0
+    for o in output:
+        if o[0:o.find(' ')].isdigit()
+            break
+        skip_comment += 1
+        
     formats = output[skip_comment:]
     del proc
     
@@ -302,7 +320,7 @@ def fetch_youtube_format_from_url(url, tbl):
 
 class Postprocess:
     def __init__(self):
-        self.use_ffmpeg = False
+        self.bypass_mkv = False
         self.use_time   = False
         self.t1         = "" # Start => 00:00:00 (HH:MM:SS)
         self.t2         = "" # End   => 00:00:00 (HH:MM:SS)
@@ -315,11 +333,10 @@ class Postprocess:
             t2_sec = time_to_sec(self.t2)
             duration = t2_sec - t1_sec
             ff_args.extend([_ydl_ffmpeg_start_time,
-                            "%f"%t1_sec,
+                            "%.2f"%t1_sec,
                             _ydl_ffmpeg_duration,
-                            "%f"%duration])
+                            "%.2f"%duration])
         ff_args.append(self.filename)
-        print(ff_args)
         return  ' '.join(ff_args)
         
     def __str__(self):
@@ -338,18 +355,16 @@ class PostprocessSingleDownloadDlg(QDialog):
         super(PostprocessSingleDownloadDlg, self).__init__()
         self.info = info
         self.initUI(info)
-        print(info)
         
     def initUI(self, info):
         layout = QFormLayout()
+        grid = QGridLayout()
         
-        self.use_ffmpeg_chk = QCheckBox("Use FFMpeg")
-        self.use_ffmpeg_chk.setChecked(info.use_ffmpeg)
-        self.use_ffmpeg_chk.stateChanged.connect(self.set_config_status)
-        
-        layout.addWidget(self.use_ffmpeg_chk)
+        self.bypass_mkv_chk = QCheckBox("Bypass MKV Warning(enforce MP4)")
+        self.bypass_mkv_chk.setChecked(info.bypass_mkv)
         
         self.time_group = QGroupBox('Timed Encoding (HH:MM:SS.MS)')
+        self.time_group.setFlat(False)
         self.time_group.setCheckable(True)
         self.time_group.clicked.connect(self.timedencoding_state_changed)
         
@@ -358,7 +373,7 @@ class PostprocessSingleDownloadDlg(QDialog):
         self.timed_encoding_t2 = QLineEdit()
         self.timed_encoding_t1.setInputMask(_ydl_ffmpeg_qt_time_mask)
         self.timed_encoding_t2.setInputMask(_ydl_ffmpeg_qt_time_mask)
-        font = QFont("Courier",11,True)
+        font = QFont("Courier",8,True)
         fm = QFontMetrics(font)
         self.timed_encoding_t1.setFixedSize(fm.width(_ydl_ffmpeg_qt_width_mask), fm.height())
         self.timed_encoding_t2.setFixedSize(fm.width(_ydl_ffmpeg_qt_width_mask), fm.height())
@@ -375,8 +390,7 @@ class PostprocessSingleDownloadDlg(QDialog):
         self.time_group.setLayout(time_layout)
         self.time_group.setChecked(self.info.use_time)
         
-        self.output_container = QWidget()
-        output_layout = QHBoxLayout(self.output_container)
+        output_layout = QHBoxLayout()
         output_layout.addWidget(QLabel("Output File"))
         self.output_file = QLineEdit(info.filename)
         output_layout.addWidget(self.output_file)
@@ -389,23 +403,12 @@ class PostprocessSingleDownloadDlg(QDialog):
         user_layout.addWidget(self.accept_btn)
         user_layout.addWidget(self.reject_btn)
         
+        layout.addWidget(self.bypass_mkv_chk)
         layout.addWidget(self.time_group)
-        layout.addWidget(self.output_container)
+        layout.addRow(output_layout)
         layout.addRow(user_layout)
-        self.set_config_status()
-        
         self.setLayout(layout)
         self.setWindowTitle("FFMpeg Setting")
-    
-    def set_config_status(self):
-        if self.use_ffmpeg_chk.isChecked():
-            self.time_group.setEnabled(True)
-            self.output_container.setEnabled(True)
-            self.info.use_ffmpeg = True
-        else:
-            self.time_group.setEnabled(False)
-            self.output_container.setEnabled(False)
-            self.info.use_ffmpeg = False
             
     def timedencoding_state_changed(self):
         if self.time_group.isChecked():
@@ -425,6 +428,9 @@ class PostprocessSingleDownloadDlg(QDialog):
 
     def get_filename(self):
         return self.output_file.text()
+        
+    def get_bypass(self):
+        return self.bypass_mkv_chk.isChecked()
 #-------------------------------------------------------------------------------
 # Reference: 
 # https://stackoverflow.com/questions/50930792/pyqt-multiple-qprocess-and-output
@@ -949,7 +955,7 @@ class QYoutubeDownloader(QWidget):
         pass
         
     def single_video_tab_UI(self):
-        import icon_setting
+        import icon_media_edit
         
         # single video download
         layout = QFormLayout()
@@ -996,7 +1002,7 @@ class QYoutubeDownloader(QWidget):
         # for connection see the definition of self.choose_format_cmb after group bottons
         
         self.set_single_download_ffmpeg_config_btn = QPushButton()
-        self.set_single_download_ffmpeg_config_btn.setIcon(QIcon(QPixmap(icon_setting.table)))
+        self.set_single_download_ffmpeg_config_btn.setIcon(QIcon(QPixmap(icon_media_edit.table)))
         self.set_single_download_ffmpeg_config_btn.setIconSize(QSize(24,24))
         self.set_single_download_ffmpeg_config_btn.setToolTip("Single download setting")
         self.set_single_download_ffmpeg_config_btn.clicked.connect(self.set_single_download_ffmpeg_config)
@@ -1094,21 +1100,24 @@ class QYoutubeDownloader(QWidget):
         res = dlg.exec_()
 
         if res == QDialog.Accepted:
-            if self.single_download_ffmpeg_config.use_ffmpeg:
+            self.single_download_ffmpeg_config.use_ffmpeg = True
+            self.single_download_ffmpeg_config.bypass_mkv = dlg.get_bypass()
+            
+            if self.single_download_ffmpeg_config.use_time:
                 t1 = dlg.get_t1()
                 t2 = dlg.get_t2()
                 
                 match1 = _check_time.search(t1)
                 match2 = _check_time.search(t2)
-    
+        
                 if not match1 or not match2:
                     msg.message_box("Invalid time format(start or end)!", msg.message_warning)
-                    self.global_message.appendPlainText("=> Error\nT1 : %s\nT2 : %s"%(t1,t2))
+                    self.global_message.appendPlainText("=> Error\nT1 : %s\nT2 : %s\n"%(t1,t2))
                     return
-                
+
                 self.single_download_ffmpeg_config.t1 = t1
                 self.single_download_ffmpeg_config.t2 = t2
-                self.single_download_ffmpeg_config.filename = dlg.get_filename()
+            self.single_download_ffmpeg_config.filename = dlg.get_filename()
         else:
             self.single_download_ffmpeg_config.use_ffmpeg = False
             
@@ -1393,6 +1402,9 @@ class QYoutubeDownloader(QWidget):
             self.global_message.appendPlainText(_exception_msg(e))
             return
 
+        if _find_ydl_warning(data):
+            self.global_message.appendPlainText("=> %s\n"%data)
+            
         if _find_ydl_error(data):
             self.process_single_error = True
             msg.message_box(data, msg.message_error)
@@ -1406,7 +1418,7 @@ class QYoutubeDownloader(QWidget):
         fn = _find_filename(data)
         if fn:
             fpath, fname = os.path.split(fn.strip())
-            self.global_message.appendPlainText("=> Path: %s\n=> Name: %s"%(fpath, fname))
+            self.global_message.appendPlainText("=> Path: %s\n=> Name: %s\n"%(fpath, fname))
             return
                         
         match = _find_percent.search(data)
@@ -1435,7 +1447,7 @@ class QYoutubeDownloader(QWidget):
             self.process_multiple_error = True
             self.youtube_path_tbl.item(self.download_count, 0).setBackground(_ydl_color_error)
             self.youtube_path_tbl.item(self.download_count, 2).setText("Error")
-            self.global_message.appendPlainText("=> %s"%data)
+            self.global_message.appendPlainText("=> %s\n"%data)
             #msg.message_box("URL: #%d\n%s"%(self.download_count,data), msg.message_error)
             return
 
@@ -1608,7 +1620,7 @@ class QYoutubeDownloader(QWidget):
                     self.process_multiple.start(sublist[0], sublist[1])
                 except (IOError, OSError) as err:
                     QMessageBox.question(self, 'Error', "%s"%err)
-                    self.global_message.appendPlainText("=> Error: %s"%err)
+                    self.global_message.appendPlainText("=> Error: %s\n"%err)
                     self.enable_single_download_buttons()
             elif dm == get_concurrent_download_text():
                 self.disable_multiple_parent_buttons()
@@ -1658,6 +1670,8 @@ class QYoutubeDownloader(QWidget):
         
             # format selected
             fmt = self.direct_format.text()
+            id = -1
+            cur_vcodec = None
             
             if self.direct_format_chk.isChecked() and fmt != "":
                 arg_list.extend(['-f', fmt])
@@ -1678,12 +1692,25 @@ class QYoutubeDownloader(QWidget):
                                         self.single_download_audio_quality_cmb.currentText().split()[0]])
                 
                 elif id == 1: # video
-                    if self.single_download_video_codec_cmb.currentIndex() > 0:
+                    cur_vcodec = self.single_download_video_codec_cmb.currentText()
+                    #if cur_vcodec == _ydl_video_codec[0]: # best
+                    #    # Bypassing mkv warning:
+                    #    # Enforce the codec as mp4 because it's impossible to predict
+                    #    # if the video will be put into MKV becuase of high quality
+                    #    arg_list.extend(['-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]'])
+                    #else: 
+                    if cur_vcodec != get_best_codec_name():
                         arg_list.extend([ _ydl_option_encode_video,
-                                        self.single_download_video_codec_cmb.currentText()
+                                          cur_vcodec
                                         ])
             # Postprocess downloaded file w/ FFMpeg
+            # Cut the video/audio 
             if self.single_download_ffmpeg_config.use_ffmpeg:
+                if id==1 and (cur_vcodec == get_best_codec_name() or\
+                              cur_vcodec == get_mkv_codec_name()) and\
+                              self.single_download_ffmpeg_config.bypass_mkv:
+                    arg_list.extend(['-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]'])
+                    
                 arg_list.extend([ _ydl_option_choose_ffmpeg, 
                                   _ydl_option_ffmpeg_argument,
                                   self.single_download_ffmpeg_config.get_args()])
@@ -1719,11 +1746,11 @@ class QYoutubeDownloader(QWidget):
             self.process_single_error = False
             self.single_file_already_exist = False
             try:
-                self.global_message.appendPlainText(self.cmd_to_msg(sublist[0], sublist[1]))
+                self.global_message.appendPlainText("%s\n"%self.cmd_to_msg(sublist[0], sublist[1]))
                 self.process_single.start(sublist[0], sublist[1])
             except (IOError, OSError) as err:
                 QMessageBox.question(self, 'Error', "%s"%err)
-                self.global_message.appendPlainText("=> Error: %s"%err)
+                self.global_message.appendPlainText("=> Error: %s\n"%err)
                 self.enable_single_download_buttons()
     
     def cancel_single_download(self):
