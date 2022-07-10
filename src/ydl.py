@@ -142,7 +142,7 @@ _ydl_color_file_exist = QColor(158,248,160)
 _ydl_color_finished   = QColor(230,213,89)
 _ydl_color_white      = QColor(255,255,255)
 
-_ydl_option_timeout_duration= "20" # secs
+_ydl_option_timeout_duration= "30" # secs
 _ydl_option_socket_timeout  = "--socket-timeout"
 _ydl_option_video_list      = "--flat-playlist"
 _ydl_option_skip_download   = "--skip-download"
