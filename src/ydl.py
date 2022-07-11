@@ -15,7 +15,7 @@
     07/09/22    Fix table event funcs
     07/09/22    Postprocess w/ FFMpeg cut video/audio
     07/10/22    Exception in case of no internet
-    07/11222    Remove unused code
+    07/11/22    Remove unused code
                 
     Note:       Change source code depending on PyQt Version 4/5
                 
@@ -315,7 +315,7 @@ class Postprocess:
         
     def __str__(self):
         return  "Use FFMpeg: %s\n"\
-                "Bypass MKV: %s"\
+                "Bypass MKV: %s\n"\
                 "Use Time  : %s\n"\
                 "T1        : %s\n"\
                 "T2        : %s\n"%(
