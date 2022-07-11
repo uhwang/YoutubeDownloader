@@ -15,6 +15,7 @@
     07/09/22    Fix table event funcs
     07/09/22    Postprocess w/ FFMpeg cut video/audio
     07/10/22    Exception in case of no internet
+    07/11222    Remove unused code
                 
     Note:       Change source code depending on PyQt Version 4/5
                 
@@ -40,37 +41,9 @@ import os, sys
 import subprocess as sp
 import datetime
 import time
-
-#from PyQt4.QtCore import Qt, QObject, QProcess, QSize, QBasicTimer, pyqtSignal
-#from PyQt4.QtGui import ( QApplication, 
-#                          QWidget,
-#                          QStyleFactory, 
-#                          QDialog,
-#                          QLabel, 
-#                          QPushButton, 
-#                          QLineEdit,
-#                          QComboBox, 
-#                          QCheckBox, 
-#                          QRadioButton, 
-#                          QTableWidget, 
-#                          QTableWidgetItem, 
-#                          QTabWidget,
-#                          QProgressBar, 
-#                          QPlainTextEdit, 
-#                          QGridLayout, 
-#                          QVBoxLayout, 
-#                          QHBoxLayout, 
-#                          QFormLayout, 
-#                          QButtonGroup,
-#                          QFileDialog, 
-#                          QScrollArea,
-#                          QColor, 
-#                          QIcon, 
-#                          QPixmap, 
-#                          QIntValidator, 
-#                          QFont,
-#                          QMessageBox)
-
+from collections import OrderedDict
+from functools import partial
+import json
 
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QProcess, QSize, QBasicTimer
 from PyQt5.QtGui import QColor, QIcon, QPixmap, QIntValidator, QFont, QFontMetrics
@@ -101,8 +74,6 @@ from PyQt5.QtWidgets import ( QApplication,
                               QButtonGroup,
                               QGroupBox)
 
-from collections import OrderedDict
-from functools import partial
 
 import icon_request_format
 import icon_download
@@ -116,8 +87,6 @@ import icon_trash_url
 import icon_json
 import icon_save
 import icon_file_open
-
-import json
 import msg
 
 _youtube_tab_text = [ 
@@ -236,37 +205,6 @@ def time_to_sec(t1):
     sec = 60*(int(t2.group(1))*60+int(t2.group(2)))+int(t2.group(3))+ float(t2.group(4))*.01
     return sec
     
-#def get_video_count_from_youtube_list(url):
-#    if url.find('list') < 0: 
-#        return
-#
-#    cmd=[ 'youtube-dl', 
-#          _ydl_option_socket_timeout, 
-#          _ydl_option_timeout_duration,
-#          _ydl_option_video_list, url]
-#          
-#    try:
-#        proc = sp.Popen(cmd, stdout=sp.PIPE, stderr = sp.STDOUT)
-#    except Exception as e:
-#        pmsg.appendPlainText("=> Fetch List\n=> Error: %s"%str(e))
-#        msg.message_box(str(e), msg.message_error)
-#        return None
-#        
-#    output = proc.communicate()[0]
-#    output = output.decode('utf-8')
-#
-#    # output is a long stream characters
-#    if _find_error.search(output):
-#        pmsg.appendPlainText("=> Fetch list\n=>%s\n"%output)
-#        msg.message_box("Can't get video list!\nYou might have network problem\nCheck message", msg.message_error)
-#        return None
-#        
-#    match = re.search("\d+ videos", output, re.MULTILINE)
-#    count = None
-#    if match:
-#        count = int(match.group(0).split(' ')[0])
-#    return count
-
 def get_youtube_formats(url, pmsg=None):
     cmd=[ 'youtube-dl',
           _ydl_option_socket_timeout, 
@@ -358,8 +296,8 @@ class Postprocess:
         self.use_ffmpeg = False
         self.bypass_mkv = False
         self.use_time   = False
-        self.t1         = "" # Start => 00:00:00 (HH:MM:SS)
-        self.t2         = "" # End   => 00:00:00 (HH:MM:SS)
+        self.t1         = "" # Start => 00:00:00:00 (HH:MM:SS:MS)
+        self.t2         = "" # End   => 00:00:00:00 (HH:MM:SS:MS)
         self.filename   = ""
         
     def get_args(self):
@@ -377,10 +315,12 @@ class Postprocess:
         
     def __str__(self):
         return  "Use FFMpeg: %s\n"\
+                "Bypass MKV: %s"\
                 "Use Time  : %s\n"\
                 "T1        : %s\n"\
-                "T2        : %s\n"%(self.use_ffmpeg, self.use_time, 
-                     self.t1, self.t2)
+                "T2        : %s\n"%(
+                self.use_ffmpeg, self.bypass_mkv, self.use_time, 
+                self.t1, self.t2)
 
 class PostprocessSingleDownload(Postprocess):
     def __init__(self):
@@ -467,10 +407,6 @@ class PostprocessSingleDownloadDlg(QDialog):
         
     def get_bypass(self):
         return self.bypass_mkv_chk.isChecked()
-#-------------------------------------------------------------------------------
-# Reference: 
-# https://stackoverflow.com/questions/50930792/pyqt-multiple-qprocess-and-output
-#-------------------------------------------------------------------------------
 
 #http://stackoverflow.com/questions/9166087/move-row-up-and-down-in-pyqt4
 def move_item_down(table):
@@ -537,7 +473,12 @@ class QProcessProgress(QProcess):
         self.file_exist = False
         self.error = False
         self.status = ""
-        
+ 
+#-------------------------------------------------------------------------------
+# Reference: 
+# https://stackoverflow.com/questions/50930792/pyqt-multiple-qprocess-and-output
+#-------------------------------------------------------------------------------
+ 
 class ProcessController(QObject):
 
     status_changed = pyqtSignal(QObject)
@@ -614,10 +555,10 @@ class ProcessController(QObject):
         if match:
             self.proc_pool[key].step = int(float(match.group(0)[:-1]))
 
-# --------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Non-modal dialogue            
 # https://stackoverflow.com/questions/38309803/pyqt-non-modal-dialog-always-modal
-# --------------------------------------------------------------------------------           
+# ---------------------------------------------------------------------
 
 class ProcessTracker(QDialog):
 
@@ -765,7 +706,11 @@ class ProcessTracker(QDialog):
         
         self.preprocess_exit()
         super(ProcessTracker, self).closeEvent(evnt)
-            
+
+# ---------------------------------------------------------------------
+# This dialogue is called at multiple download
+# ---------------------------------------------------------------------
+        
 class QYoutubeDownloadFormatDlg(QDialog):
     def __init__(self, url_table, msg):
         super(QYoutubeDownloadFormatDlg, self).__init__()
@@ -859,9 +804,9 @@ class QYoutubeDownloadFormatDlg(QDialog):
                 else self.youtube_format_tbl.item(row, 0).text()\
                 if row >= 0 else _ydl_format_none
                   
-# =========================================================
+# ---------------------------------------------------------------------
 #                  YOUTUBE DOWNLOADER
-# =========================================================
+# ---------------------------------------------------------------------
 
 #https://arcpy.wordpress.com/2012/04/20/146/    
 def hms_string(sec_elapsed):
@@ -904,11 +849,6 @@ class QYoutubeDownloader(QWidget):
         self.setWindowIcon(QIcon(QPixmap(icon_youtube.table)))
         self.show()
     
-    #http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
-    def pretty_size(n,pow=0,b=1024,u='B',pre=['']+[p for p in 'KMGTPEZY']):
-        pow,n=min(int(log(max(n*b**pow,1),b)),len(pre)-1),n*b**pow
-        return "%%.%if %%s%%s"%abs(pow%(-pow-1))%(n/b**float(pow),pre[pow],u)
-
     def timerEvent(self, e):
     
         if self.process_single:
@@ -931,10 +871,6 @@ class QYoutubeDownloader(QWidget):
         layout.addWidget(self.global_message)
         self.message_tab.setLayout(layout)
 
-    # ============================================================
-    #               YOUTUBE DOWNLOADER
-    # ============================================================
-    
     def youtube_download_tab_UI(self):
         layout = QFormLayout()
         
@@ -1389,10 +1325,6 @@ class QYoutubeDownloader(QWidget):
                 msg.message_box(str(e), msg.message_error)
                 return
         
-    # disable closing dialog from Escape key pressed
-    def load_text(self):
-        pass
-        
     def choose_global_download_format(self):
         nurl = self.youtube_path_tbl.rowCount()
         if nurl == 0: return
@@ -1663,11 +1595,11 @@ class QYoutubeDownloader(QWidget):
             elif dm == get_concurrent_download_text():
                 self.disable_multiple_parent_buttons()
                 pc = ProcessController(self.multiple_download_job_list)
-                #tp = ProcessTracker(pc, self.global_message)
+                #tp = ProcessTracker(pc, self.global_message) # modal
                 tp = ProcessTracker(self, pc, self.global_message)
                 pc.status_changed.connect(self.set_download_status)
                 tp.status_changed.connect(self.set_download_button_status)
-                #tp.exec_()
+                #tp.exec_() #modal
                 tp.show()
                 
     
@@ -1731,12 +1663,6 @@ class QYoutubeDownloader(QWidget):
                 
                 elif id == 1: # video
                     cur_vcodec = self.single_download_video_codec_cmb.currentText()
-                    #if cur_vcodec == _ydl_video_codec[0]: # best
-                    #    # Bypassing mkv warning:
-                    #    # Enforce the codec as mp4 because it's impossible to predict
-                    #    # if the video will be put into MKV becuase of high quality
-                    #    arg_list.extend(['-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]'])
-                    #else: 
                     if cur_vcodec != get_best_codec_name():
                         arg_list.extend([ _ydl_option_encode_video,
                                           cur_vcodec
@@ -1747,6 +1673,9 @@ class QYoutubeDownloader(QWidget):
                 if id==1 and (cur_vcodec == get_best_codec_name() or\
                               cur_vcodec == get_mkv_codec_name()) and\
                               self.single_download_ffmpeg_config.bypass_mkv:
+                    # Bypassing mkv warning:
+                    # Enforce the codec as mp4 because it's impossible to predict
+                    # if the video will be put into MKV becuase of high quality
                     arg_list.extend(['-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]'])
                     
                 arg_list.extend([ _ydl_option_choose_ffmpeg, 
@@ -1810,14 +1739,16 @@ class QYoutubeDownloader(QWidget):
         
         return "=> %s %s"%(msg1, msg2)    
     
-
 def main():
     app = QApplication(sys.argv)
-    #print(QStyleFactory.keys())
+
+    # --- PyQt4 Only
     #app.setStyle(QStyleFactory.create(u'Motif'))
     #app.setStyle(QStyleFactory.create(u'CDE'))
     #app.setStyle(QStyleFactory.create(u'Plastique'))
     #app.setStyle(QStyleFactory.create(u'Cleanlooks'))
+    # --- PyQt4 Only
+    
     app.setStyle(QStyleFactory.create("Fusion"))
     ydl= QYoutubeDownloader()
     sys.exit(app.exec_())
