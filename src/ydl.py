@@ -238,6 +238,7 @@ def get_youtube_formats(url, pmsg=None):
     # count commnet lines
     skip_comment = 0
     for o in output:
+        o.strip()
         if _find_digit.search(o[0:o.find(' ')]):
             break
         skip_comment += 1
@@ -520,7 +521,7 @@ class ProcessController(QObject):
     def kill(self):
         if self.proc_pool:
             for p in self.proc_pool.values():
-                if p: p.kill()
+                p.kill()
                 
     def delete_process(self):
         self.proc_pool = None
@@ -528,7 +529,7 @@ class ProcessController(QObject):
         
     def read_data(self, key):
         try:
-            data = str(self.proc_pool[key].readLine(), 'cp949') # Windows only            
+            data = str(self.proc_pool[key].readLine(), 'cp949') # For Windows
         except Exception as e:
             proc.error = True
             proc.status = "=> [%s] : %s\n%s"%(key, _exception_msg(e), data)
@@ -637,7 +638,7 @@ class ProcessTracker(QDialog):
             self.timer.stop()
             end_time = time.time()
             elasped_time = hms_string(end_time-self.start_time)
-            self.msg.appendPlainText("=> Elasped time: {}\n=> Concurrent download Done!".format(elasped_time))
+            self.msg.appendPlainText("=> Elasped time: {}\n=> Concurrent download Done!\n".format(elasped_time))
             self.enable_download_buttons()
             return
             
@@ -673,6 +674,8 @@ class ProcessTracker(QDialog):
         self.start_btn.setEnabled(False)
 
     def enable_download_buttons(self):
+        if self.proc_ctrl.nproc <= 0:
+            msg.message_box("Concurrent download finished!", msg.message_normal)
         self.start_btn.setEnabled(True)
         
     def cancel_download(self):
@@ -681,7 +684,7 @@ class ProcessTracker(QDialog):
             if ret == QMessageBox.No: 
                 return
         self.proc_ctrl.kill()
-        self.enable_download_buttons()
+        self.start_btn.setEnabled(True)
         
     def preprocess_exit(self):
         self.timer.stop()
@@ -814,7 +817,6 @@ def hms_string(sec_elapsed):
     m = int((sec_elapsed % (60 * 60)) / 60)
     s = sec_elapsed % 60.
     return "{}:{:>02}:{:>05.2f}".format(h, m, s)
-
 
 class QYoutubeDownloader(QWidget):
     def __init__(self):
@@ -1408,7 +1410,7 @@ class QYoutubeDownloader(QWidget):
     def multiple_download_data_read(self):
         try:
             #data = str(self.process_multiple.readAll(), 'utf-8')
-            data = str(self.process_multiple.readLine(), 'cp949') # windows only
+            data = str(self.process_multiple.readLine(), 'cp949') # for Windows
         except Exception as e:
             self.global_message.appendPlainText(_exception_msg(e))
             return
@@ -1460,7 +1462,7 @@ class QYoutubeDownloader(QWidget):
         if self.process_multiple_error is False and self.process_multiple_file_exist is False:
             self.youtube_path_tbl.item(self.download_count, 0).setBackground(_ydl_color_finished)
             self.youtube_path_tbl.item(self.download_count, 2).setText("Finished")
-            self.global_message.appendPlainText("=> %d-th download finished"%self.download_count)
+            self.global_message.appendPlainText("=> %d-th download finished\n"%self.download_count)
                 
         self.download_count += 1
         
@@ -1493,7 +1495,7 @@ class QYoutubeDownloader(QWidget):
     def print_download_elasped(self):
         download_t2 = time.time()
         elasped_time = hms_string(download_t2-self.download_t1)
-        self.global_message.appendPlainText("=> Download Time: {}".format(elasped_time))
+        self.global_message.appendPlainText("=> Download Time: {}\n".format(elasped_time))
         msg.message_box("Download Time: {}".format(elasped_time), msg.message_normal)
         
     def delete_job_list(self):
@@ -1534,9 +1536,9 @@ class QYoutubeDownloader(QWidget):
             else:
                 if id == 0: # audio only
                     audio_codec = self.multiple_download_audio_codec_cmb.currentText()
-                    arg_list.extend([_ydl_option_extract_audio,
-                                    _ydl_option_audio_format,
-                                    audio_codec])
+                    arg_list.extend([ _ydl_option_extract_audio,
+                                      _ydl_option_audio_format,
+                                      audio_codec])
                                     
                     if audio_codec != _ydl_best_audio_codec:
                         arg_list.extend([_ydl_option_audio_quality, 
@@ -1654,8 +1656,8 @@ class QYoutubeDownloader(QWidget):
                 if id == 0: # audio only
                     audio_codec = self.single_download_audio_codec_cmb.currentText()
                     arg_list.extend([ _ydl_option_extract_audio,
-                                    _ydl_option_audio_format,
-                                    audio_codec])
+                                      _ydl_option_audio_format,
+                                      audio_codec])
                                     
                     if audio_codec != _ydl_best_audio_codec:
                         arg_list.extend([ _ydl_option_audio_quality, 
