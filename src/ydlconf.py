@@ -109,5 +109,3 @@ def load_config():
     YdlConfig._limit_max_process_count                = reutil._string_to_bool(concur["limit_max_process_count"])
     YdlConfig._max_process_count                      = reutil._find_int.search(concur["max_process_count"])[0]
     
-load_config()
-

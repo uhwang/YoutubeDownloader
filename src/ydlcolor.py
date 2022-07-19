@@ -7,6 +7,7 @@
     
 '''
 from PyQt5.QtGui import QColor
+#from PyQt4.QtGui import QColor
 
 _ydl_color_error      = QColor(247,79,83)
 _ydl_color_file_exist = QColor(158,248,160)

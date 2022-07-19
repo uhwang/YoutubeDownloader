@@ -45,7 +45,6 @@ import time
 from collections import OrderedDict
 from functools import partial
 import json
-
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QProcess, QSize, QBasicTimer
 from PyQt5.QtGui import QColor, QIcon, QPixmap, QIntValidator, QFont, QFontMetrics
 from PyQt5.QtWidgets import ( QApplication, 
@@ -94,6 +93,7 @@ import util
 import reutil
 import ydlconst
 import ydlcolor
+import ydlconf
 import funs
 import dnlist
 
@@ -472,6 +472,8 @@ class QYoutubeDownloader(QWidget):
     def __init__(self):
         super(QYoutubeDownloader, self).__init__()
         self.single_download_ffmpeg_config = PostprocessSingleDownload()
+        ydlconf.load_config()
+        
         self.initUI()
 
     def initUI(self):
@@ -597,15 +599,19 @@ class QYoutubeDownloader(QWidget):
 
         self.vlist_message = QPlainTextEdit()
 
-        resp_lay = QGridLayout()
-        resp_lay.setContentsMargins(0,0,0,0)
-        #grid_option_btn.setSpacing(5)
+        save_lay = QHBoxLayout()
+        #resp_lay.setContentsMargins(0,0,0,0)
         self.save_all_vlist_chk = QCheckBox("Save All")
         self.save_all_vlist_chk.stateChanged.connect(self.save_all_vlist_changed)
         self.video_list_range = QLineEdit()
         self.video_list_range.setFixedWidth(100)
         self.video_list_range.setToolTip("Ex: 1-10")
+
+        save_lay.addWidget(self.save_all_vlist_chk)
+        save_lay.addWidget(QLabel("Video Range"))
+        save_lay.addWidget(self.video_list_range)
         
+        ans_lay = QHBoxLayout()
         self.create_vlist_btn = QPushButton("Start")
         self.create_vlist_btn.setIcon(QIcon(QPixmap(icon_start_vlist.table)))
         self.create_vlist_btn.setIconSize(QSize(24,24))
@@ -622,19 +628,27 @@ class QYoutubeDownloader(QWidget):
         self.save_vlist_json_btn.setToolTip("Save the list of URLs as JSON format")
         self.save_vlist_json_btn.clicked.connect(self.save_vlist_json)
         
-        resp_lay.addWidget(self.save_all_vlist_chk, 0,0)
-        resp_lay.addWidget(QLabel("Video Range"), 0, 1)
-        resp_lay.addWidget(self.video_list_range, 0, 2)
-        resp_lay.addWidget(self.create_vlist_btn, 1,0)
-        resp_lay.addWidget(self.cancel_create_vlist_btn, 1,1)
-        resp_lay.addWidget(self.save_vlist_json_btn, 1,2)
+        self.clear_vlist_msg_btn = QPushButton('', self)
+        self.clear_vlist_msg_btn.setIcon(QIcon(QPixmap(icon_trash_url.table)))
+        self.clear_vlist_msg_btn.setIconSize(QSize(24,24))
+        self.clear_vlist_msg_btn.setToolTip("Delete all messages")
+        self.clear_vlist_msg_btn.clicked.connect(self.clear_vlist_msg)
+        
+        ans_lay.addWidget(self.create_vlist_btn)
+        ans_lay.addWidget(self.cancel_create_vlist_btn)
+        ans_lay.addWidget(self.clear_vlist_msg_btn)
+        ans_lay.addWidget(self.save_vlist_json_btn)
 
         self.save_all_vlist_chk.setChecked(True)
         
         layout.addRow(grid)
         layout.addWidget(self.vlist_message)
-        layout.addRow(resp_lay)
+        layout.addRow(save_lay)
+        layout.addRow(ans_lay)
         self.create_vlist_tab.setLayout(layout)
+        
+    def clear_vlist_msg(self):
+        self.vlist_message.clear()
         
     def save_all_vlist_changed(self):
         if self.save_all_vlist_chk.isChecked():
@@ -742,7 +756,7 @@ class QYoutubeDownloader(QWidget):
         header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
-        
+  
         grid_btn = QGridLayout()
         self.fetch_youtube_format_btn = QPushButton('', self)
         self.fetch_youtube_format_btn.setIcon(QIcon(QPixmap(icon_request_format.table)))

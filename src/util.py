@@ -80,31 +80,31 @@ def get_youtube_format_from_formats(format):
     return fm
     
 def fetch_youtube_format_from_url(url, tbl, pmsg=None):
-    
-        if not reutil._valid_youtube_url.search(url):
-            msg.message_box("Invalid URL", msg.message_error)
-            return None
 
-        if url == '':
-            return None
-        
-        formats = get_youtube_formats(url, pmsg)
-        if formats == None: return
-        
-        frm = ["None"]
-        
-        for i, f in enumerate(formats):
-            info = get_youtube_format_from_formats(f)
-            if info == None: break
-            tbl.insertRow(i)
-            tbl.setItem(i, 0, QTableWidgetItem(info[0]))
-            tbl.setItem(i, 1, QTableWidgetItem(info[1]))
-            tbl.setItem(i, 2, QTableWidgetItem(info[2]))
-            tbl.setItem(i, 3, QTableWidgetItem(info[3]))
-            tbl.setItem(i, 4, QTableWidgetItem(info[4]))
-            tbl.setItem(i, 5, QTableWidgetItem(info[5]))
-            frm.append(info[0])
-        return frm
+    if not reutil._valid_youtube_url.search(url):
+        msg.message_box("Invalid URL", msg.message_error)
+        return None
+
+    if url == '':
+        return None
+    
+    formats = get_youtube_formats(url, pmsg)
+    if formats == None: return
+    
+    frm = ["None"]
+    
+    for i, f in enumerate(formats):
+        info = get_youtube_format_from_formats(f)
+        if info == None: break
+        tbl.insertRow(i)
+        tbl.setItem(i, 0, QTableWidgetItem(info[0]))
+        tbl.setItem(i, 1, QTableWidgetItem(info[1]))
+        tbl.setItem(i, 2, QTableWidgetItem(info[2]))
+        tbl.setItem(i, 3, QTableWidgetItem(info[3]))
+        tbl.setItem(i, 4, QTableWidgetItem(info[4]))
+        tbl.setItem(i, 5, QTableWidgetItem(info[5]))
+        frm.append(info[0])
+    return frm
 
 #http://stackoverflow.com/questions/9166087/move-row-up-and-down-in-pyqt4
 def move_item_down(table):
