@@ -23,7 +23,7 @@ def time_to_sec(t1):
 def get_youtube_formats(url, pmsg=None):
     cmd=[ 'youtube-dl',
           ydlconst._ydl_option_socket_timeout, 
-          ydlconf.get_fetch_timeout_duration(),
+          "%d"%ydlconf.get_fetch_timeout_duration(),
           '-F', url]
     
     try:

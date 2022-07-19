@@ -255,7 +255,8 @@ class ProcessTracker(QDialog):
         self.widget.setLayout(grid)
         self.scroll = QScrollArea()
         self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.scroll.setMaximumHeight(200)
+        #self.scroll.setMaximumHeight(200)
+        self.scroll.setMaximumHeight(ydlconf.get_tacker_max_height())
         self.scroll.setWidget(self.widget)
         self.scroll.setWidgetResizable(True)
         
@@ -318,7 +319,8 @@ class ProcessTracker(QDialog):
         if self.timer.isActive():
             self.timer.stop()
         else:
-            self.timer.start(100, self)
+            #self.timer.start(100, self)
+            self.timer.start(ydlconf.get_concurrent_download_timer_interval(), self)
         
         try:
             self.proc_ctrl.start()
@@ -473,7 +475,6 @@ class QYoutubeDownloader(QWidget):
         super(QYoutubeDownloader, self).__init__()
         self.single_download_ffmpeg_config = PostprocessSingleDownload()
         ydlconf.load_config()
-        
         self.initUI()
 
     def initUI(self):
@@ -495,6 +496,7 @@ class QYoutubeDownloader(QWidget):
         
         self.youtube_download_tab_UI()
         self.message_tab_UI()
+        self.global_message.appendPlainText(ydlconf.dump_config())
         
         tab_layout.addWidget(self.tabs)
         self.form_layout.addRow(tab_layout)
@@ -710,7 +712,10 @@ class QYoutubeDownloader(QWidget):
         json_save_file = json_save_file[0] # PyQt5
         if json_save_file == '':
             return
-            
+        
+        if json_save_file.find(".json") == -1:
+            json_save_file += ".json"
+        
         data = OrderedDict()
         v_list = list()
         
@@ -1381,7 +1386,8 @@ class QYoutubeDownloader(QWidget):
                 if self.single_download_timer.isActive():
                     self.multiple_download_timer.stop()
                 else:
-                    self.multiple_download_timer.start(100, self)
+                    #self.multiple_download_timer.start(100, self)
+                    self.multiple_download_timer.start(ydlconf.get_sequential_download__timer_interval(), self)
                 
                 self.multiple_download_progress.setTextVisible(True)
                 self.multiple_download_progress.setFormat("Download: %p%")
@@ -1509,7 +1515,8 @@ class QYoutubeDownloader(QWidget):
             if self.single_download_timer.isActive():
                 self.single_download_timer.stop()
             else:
-                self.single_download_timer.start(100, self)
+                #self.single_download_timer.start(100, self)
+                self.single_download_timer.start(ydlconf.get_single_download_timer_interval(), self)
             
             self.single_download_progress.setTextVisible(True)
             self.single_download_progress.setFormat("Download: %p%")

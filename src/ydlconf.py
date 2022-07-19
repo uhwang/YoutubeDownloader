@@ -25,25 +25,26 @@ class YdlConfig():
     _single_download_timer_interval          = 100 # milisec
     _sequential_download_timer_interval      = 100 # ms
     _concurrent_download_timer_interval      = 100 # ms
-    _concurrent_list_download_timer_interval = 10  # ms
+    #_concurrent_list_download_timer_interval = 10  # ms
     
     # concurrent
     _limit_max_process_count = True
     _max_process_count       = 10
+    _tracker_max_height      = 200
 
     def __init__(self):
         pass
         
     def __str__(self):
-        return "Fetch Tmeout Duration                  : %d\n"\
-               "Single Download Timeout Duration       : %d\n"\
-               "Sequential Download Timeout Duration   : %d\n"\
-               "Single Download Timer Interval         : %d\n"\
-               "Sequential Download Timer Interval     : %d\n"\
-               "Concurrent Download Timer Interval     : %d\n"\
-               "Concurrent List Download Timer Interval: %d\n"\
+        return "Fetch Tmeout Duration                  : %d ms\n"\
+               "Single Download Timeout Duration       : %d ms\n"\
+               "Sequential Download Timeout Duration   : %d ms\n"\
+               "Single Download Timer Interval         : %d ms\n"\
+               "Sequential Download Timer Interval     : %d ms\n"\
+               "Concurrent Download Timer Interval     : %d ms\n"\
                "Limit Max Process Count                : %s\n"\
                "Max Process Count                      : %d\n"\
+               "Tracker Max Height                     : %d\n"\
                %(
                     YdlConfig._fetch_timeout_duration,
                     YdlConfig._single_download_timeout_duration,
@@ -51,12 +52,15 @@ class YdlConfig():
                     YdlConfig._single_download_timer_interval,
                     YdlConfig._sequential_download_timer_interval,
                     YdlConfig._concurrent_download_timer_interval,
-                    YdlConfig._concurrent_list_download_timer_interval,
                     YdlConfig._limit_max_process_count,
-                    YdlConfig._max_process_count
+                    YdlConfig._max_process_count,
+                    YdlConfig._tracker_max_height
                )
     
 _config_var = YdlConfig()
+
+def dump_config():
+    return str(_config_var)
     
 def get_fetch_timeout_duration(): 
     return YdlConfig._fetch_timeout_duration
@@ -76,15 +80,18 @@ def get_sequential_download__timer_interval():
 def get_concurrent_download_timer_interval(): 
     return YdlConfig._concurrent_download_timer_interval
     
-def get_concurrent_list_download_timer_interval(): 
-    return YdlConfig._concurrent_list_download_timer_interval 
+#def get_concurrent_list_download_timer_interval(): 
+#    return YdlConfig._concurrent_list_download_timer_interval 
     
 def get_limit_max_process_count(): 
     return YdlConfig._limit_max_process_count
     
 def get_max_process_count(): 
     return YdlConfig._max_process_count
-            
+
+def get_tacker_max_height(): 
+    return YdlConfig._tracker_max_height
+    
 def load_config():
     global _config
     
@@ -99,13 +106,13 @@ def load_config():
     timer = _config["timer"]
     concur= _config["concurrent"]
    
-    YdlConfig._fetch_timeout_duration                 = reutil._find_int.search(ydl["fetch_timeout_duration"])[0]
-    YdlConfig._single_download_timeout_duration       = reutil._find_int.search(ydl["single_download_timeout_duration"])[0]
-    YdlConfig._sequential_download_timeout_duration   = reutil._find_int.search(ydl["sequential_download_timeout_duration"])[0]
-    YdlConfig._single_download_timer_interval         = reutil._find_int.search(timer["single_download_timer_interval"])[0]
-    YdlConfig._sequential_download__timer_interval    = reutil._find_int.search(timer["sequential_download__timer_interval"])[0]
-    YdlConfig._concurrent_download_timer_interval     = reutil._find_int.search(timer["concurrent_download_timer_interval"])[0]
-    YdlConfig._concurrent_list_download_timer_interval= reutil._find_int.search(timer["concurrent_list_download_timer_interval"])[0]
+    YdlConfig._fetch_timeout_duration                 = int(reutil._find_int.search(ydl["fetch_timeout_duration"])[0])
+    YdlConfig._single_download_timeout_duration       = int(reutil._find_int.search(ydl["single_download_timeout_duration"])[0])
+    YdlConfig._sequential_download_timeout_duration   = int(reutil._find_int.search(ydl["sequential_download_timeout_duration"])[0])
+    YdlConfig._single_download_timer_interval         = int(reutil._find_int.search(timer["single_download_timer_interval"])[0])
+    YdlConfig._sequential_download__timer_interval    = int(reutil._find_int.search(timer["sequential_download__timer_interval"])[0])
+    YdlConfig._concurrent_download_timer_interval     = int(reutil._find_int.search(timer["concurrent_download_timer_interval"])[0])
     YdlConfig._limit_max_process_count                = reutil._string_to_bool(concur["limit_max_process_count"])
-    YdlConfig._max_process_count                      = reutil._find_int.search(concur["max_process_count"])[0]
+    YdlConfig._max_process_count                      = int(reutil._find_int.search(concur["max_process_count"])[0])
+    YdlConfig._tracker_max_height                     = int(reutil._find_int.search(concur["tracker_max_height"])[0])
     

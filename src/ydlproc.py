@@ -75,16 +75,19 @@ class ProcessController(QObject):
         self.nproc = 0
         
     def read_data(self, key):
+        proc = self.proc_pool[key]
+
         try:
-            data = str(self.proc_pool[key].readLine(), 'cp949') # For Windows
+            #data = str(proc.readLine(), 'cp949') # For Windows
+            data = str(proc.readLine(), 'utf-8') # For Windows
         except Exception as e:
             proc.error = True
-            proc.status = "=> [%s] : %s\n%s"%(key, _exception_msg(e), data)
+            #proc.status = "=> [%s] : %s\n%s"%(key, _exception_msg(e), data)
+            proc.status = "=> [%s] : %s\n... %s"%(key, data)
             proc.step = 100
             self.status_changed.emit(proc)
             return
             
-        proc = self.proc_pool[key]
         if reutil._find_ydl_error(data):
             proc.error = True
             proc.status = data
@@ -101,5 +104,5 @@ class ProcessController(QObject):
                        
         match = reutil._find_percent.search(data)
         if match:
-            self.proc_pool[key].step = int(float(match.group(0)[:-1]))
+            proc.step = int(float(match.group(0)[:-1]))
 
