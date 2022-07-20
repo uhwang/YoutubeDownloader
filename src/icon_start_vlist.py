@@ -284,8 +284,8 @@ table=[
 "          w w w w w w w 0 +                                                                     ",
 "          p o 9 9 9 O . i                                                                       ",
 "              u o u M                                                                           ",
-"          tXyXuXtXuXuXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtXtX          ",
-"    0XtX0X0XtXtXtXtX9XtX9X9X9XtX0X0XtX0X0XtX0X0XtX0X0XtX0X0XtX0XtX0X0XtX0X0XtX0X0XtX0X0XtXwX    ",
-"                    9XtX9X9X9XtX0X0XtX0X0XtX0X0XtX0X0XtX0X0XtX0XtX0X0XtX0X0X                    ",
+"                                                                                                ",
+"                                                                                                ",
+"                                                                                                ",
 "                                                                                                "
 ]

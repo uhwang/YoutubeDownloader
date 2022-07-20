@@ -53,7 +53,7 @@ table=[
 "v c #EC4E4E",
 "b c #EC4F4F",
 "n c #ED4F4F",
-"    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb    ",
+"                                                ",
 "   bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb   ",
 "  bbbbbbccccbbblbbbbbbbblbbbbbbbccccbbbbbblbbb  ",
 " bcbbbbbccccbbbbblbblbbcbblbblbbccccbbbbbblbbcb ",
@@ -100,5 +100,5 @@ table=[
 " @>>>>*>**>>>>>>>>*>**>>>>>*>>*>>>>>>>*>**>>>>@ ",
 "  @%***********%*******************%********%@  ",
 "   o@%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@o   ",
-"    XXXXXoXXXXXXXXXoXoXXXXXXXXXXX.XXXXXXXoXX    "
+"                                                "
 ]
