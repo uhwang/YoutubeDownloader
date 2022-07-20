@@ -1100,6 +1100,9 @@ class QYoutubeDownloader(QWidget):
             v_list.append({"desc": desc, "url": url})
         data["videos"] = v_list
             
+        if json_save_file.find(".json") == -1:
+            json_save_file += ".json"
+        
         try:
             with open(json_save_file, 'w') as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
@@ -1122,6 +1125,7 @@ class QYoutubeDownloader(QWidget):
             try:
                 with open(file) as f:
                     videos = json.load(f)["videos"]
+                    util.delete_all_item(self.youtube_path_tbl)
                     cur_row = self.youtube_path_tbl.rowCount()
                     for k, v in enumerate(videos):
                         self.youtube_path_tbl.insertRow(cur_row+k)
