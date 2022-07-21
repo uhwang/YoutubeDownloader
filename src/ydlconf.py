@@ -25,7 +25,6 @@ class YdlConfig():
     _single_download_timer_interval          = 100 # milisec
     _sequential_download_timer_interval      = 100 # ms
     _concurrent_download_timer_interval      = 100 # ms
-    #_concurrent_list_download_timer_interval = 10  # ms
     
     # concurrent
     _limit_max_process_count = True
@@ -36,15 +35,15 @@ class YdlConfig():
         pass
         
     def __str__(self):
-        return "Fetch Tmeout Duration                  : %d ms\n"\
-               "Single Download Timeout Duration       : %d ms\n"\
-               "Sequential Download Timeout Duration   : %d ms\n"\
-               "Single Download Timer Interval         : %d ms\n"\
-               "Sequential Download Timer Interval     : %d ms\n"\
-               "Concurrent Download Timer Interval     : %d ms\n"\
-               "Limit Max Process Count                : %s\n"\
-               "Max Process Count                      : %d\n"\
-               "Tracker Max Height                     : %d\n"\
+        return "Fetch Tmeout             : %d ms\n"\
+               "Single Timeout           : %d ms\n"\
+               "Sequential Timeout       : %d ms\n"\
+               "Single Timer Interval    : %d ms\n"\
+               "Sequential Timer Interval: %d ms\n"\
+               "Concurrent Timer Interval: %d ms\n"\
+               "Limit Max Process Count  : %s\n"\
+               "Max Process Count        : %d\n"\
+               "Tracker Max Height       : %d\n"\
                %(
                     YdlConfig._fetch_timeout_duration,
                     YdlConfig._single_download_timeout_duration,
@@ -79,9 +78,6 @@ def get_sequential_download__timer_interval():
     
 def get_concurrent_download_timer_interval(): 
     return YdlConfig._concurrent_download_timer_interval
-    
-#def get_concurrent_list_download_timer_interval(): 
-#    return YdlConfig._concurrent_list_download_timer_interval 
     
 def get_limit_max_process_count(): 
     return YdlConfig._limit_max_process_count
