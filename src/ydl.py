@@ -523,6 +523,9 @@ class QYoutubeDownloader(QWidget):
         clear.clicked.connect(self.clear_global_message)
         
         self.global_message = QPlainTextEdit()
+        font = QFont('monospace')
+        font.setStyleHint(QFont.TypeWriter)
+        self.global_message.setFont(font)
         layout.addWidget(clear)
         layout.addWidget(self.global_message)
         self.message_tab.setLayout(layout)
@@ -621,7 +624,7 @@ class QYoutubeDownloader(QWidget):
         
         self.cancel_create_vlist_btn = QPushButton("Stop")
         self.cancel_create_vlist_btn.setIcon(QIcon(QPixmap(icon_stop_vlist.table)))
-        self.cancel_create_vlist_btn.setIconSize(QSize(24,24))
+        self.cancel_create_vlist_btn.setIconSize(QSize(24, 24))
         self.cancel_create_vlist_btn.clicked.connect(self.cancel_create_vlist)
 
         self.save_vlist_json_btn = QPushButton('', self)
