@@ -72,8 +72,9 @@ from PyQt5.QtWidgets import ( QApplication,
                               QMessageBox,
                               QHeaderView,
                               QButtonGroup,
-                              QGroupBox)
-
+                              QGroupBox,
+                              QTreeWidget,
+                              QTreeWidgetItem)
 
 import icon_request_format
 import icon_download
@@ -256,7 +257,7 @@ class ProcessTracker(QDialog):
         self.scroll = QScrollArea()
         self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         #self.scroll.setMaximumHeight(200)
-        self.scroll.setMaximumHeight(ydlconf.get_tacker_max_height())
+        self.scroll.setMaximumHeight(ydlconf.get_tacker_height())
         self.scroll.setWidget(self.widget)
         self.scroll.setWidgetResizable(True)
         
@@ -556,16 +557,17 @@ class QYoutubeDownloader(QWidget):
         self.single_video_tab   = QWidget()
         self.multiple_video_tab = QWidget()
         self.create_vlist_tab = QWidget()
-        self.youtubedl_setting_tab = QWidget()
+        self.setting_tab = QWidget()
         
         self.youtube_tabs.addTab(self.single_video_tab, funs.get_single_tab_text())
         self.youtube_tabs.addTab(self.multiple_video_tab, funs.get_multiple_tab_text())
         self.youtube_tabs.addTab(self.create_vlist_tab, funs.get_urllisttab_text())
-        self.youtube_tabs.addTab(self.youtubedl_setting_tab, funs.get_youtubedl_setting_tab_text())
+        self.youtube_tabs.addTab(self.setting_tab, funs.get_youtubedl_setting_tab_text())
         self.youtube_tabs.currentChanged.connect(self.youtube_video_tab_changed)
         self.single_video_tab_UI()
         self.multiple_video_tab_UI()
         self.create_vlist_tab_UI()
+        self.setting_tab_UI()
         
         self.time_font = QFont("Courier",11,True)
         self.single_download_timer = QBasicTimer()
@@ -577,6 +579,70 @@ class QYoutubeDownloader(QWidget):
         layout.addRow(grid)
         layout.addRow(self.youtube_tabs)
         self.youtube_tab.setLayout(layout)
+        
+    def setting_tab_UI(self):
+        import icon_apply
+        import icon_undo
+        
+        layout = QFormLayout()
+        self.config_tree = QTreeWidget()
+        self.config_tree.setColumnCount(2)
+        self.config_tree.setHeaderLabels(["Name", "Value"])
+        
+        for key1, item1 in ydlconf._config.items():
+            tree_item = QTreeWidgetItem(self.config_tree)
+            tree_item.setText(0,key1)
+            for key2, val in item1.items():
+                sub_item = QTreeWidgetItem()
+                sub_item.setText(0,key2)
+                sub_item.setText(1,val)
+                sub_item.setFlags(sub_item.flags()|Qt.ItemIsEditable)
+                tree_item.addChild(sub_item)
+        
+        resp_lay = QHBoxLayout()
+
+        self.apply_config_btn = QPushButton()
+        self.apply_config_btn.setIcon(QIcon(QPixmap(icon_apply.table)))
+        self.apply_config_btn.setIconSize(QSize(24,24))
+        self.apply_config_btn.clicked.connect(self.apply_config)
+
+        self.undo_config_btn = QPushButton()
+        self.undo_config_btn.setIcon(QIcon(QPixmap(icon_undo.table)))
+        self.undo_config_btn.setIconSize(QSize(24,24))
+        self.undo_config_btn.clicked.connect(self.undo_config)
+        
+        self.save_config_btn = QPushButton()
+        self.save_config_btn.setIcon(QIcon(QPixmap(icon_save.table)))
+        self.save_config_btn.setIconSize(QSize(24,24))
+        self.save_config_btn.clicked.connect(self.save_config)
+        
+        resp_lay.addWidget(self.apply_config_btn)
+        resp_lay.addWidget(self.undo_config_btn)
+        resp_lay.addWidget(self.save_config_btn)
+        
+        layout.addWidget(self.config_tree)
+        layout.addRow(resp_lay)
+        
+        self.setting_tab.setLayout(layout)
+        
+    def apply_config(self):
+
+        for i in range(self.config_tree.topLevelItemCount()):
+            item = self.config_tree.topLevelItem(i)
+            name = item.text(0)
+            nchild = item.childCount()
+            for j in range(nchild):
+                field = item.child(j).text(0)
+                value = item.child(j).text(1)
+                ydlconf._config[name][field] = value
+        
+        self.global_message.appendPlainText("=== New Config ===\n%s"%ydlconf.dump_config())
+        
+    def undo_config(self):
+        ydlconf.set_default_config()
+        
+    def save_config(self):
+        ydlconf.save_config()
         
     def get_new_youtube_download_path(self):
         startingDir = os.getcwd() 
@@ -1185,7 +1251,8 @@ class QYoutubeDownloader(QWidget):
     def single_download_data_read(self):
         try:
             #data = str(self.process_single.readAll(), 'utf-8')
-            data = str(self.process_single.readLine(), 'cp949') # Windows 
+            #data = str(self.process_single.readLine(), 'cp949') # Windows 
+            data = str(self.process_single.readLine(), ydlconf.get_encoding()) # Windows 
         except Exception as e:
             self.global_message.appendPlainText(_exception_msg(e))
             return
@@ -1226,7 +1293,8 @@ class QYoutubeDownloader(QWidget):
     def multiple_download_data_read(self):
         try:
             #data = str(self.process_multiple.readAll(), 'utf-8')
-            data = str(self.process_multiple.readLine(), 'cp949') # for Windows
+            #data = str(self.process_multiple.readLine(), 'cp949') # for Windows
+            data = str(self.process_multiple.readLine(), ydlconf.get_encoding()) 
         except Exception as e:
             self.global_message.appendPlainText(_exception_msg(e))
             return
@@ -1394,7 +1462,7 @@ class QYoutubeDownloader(QWidget):
                     self.multiple_download_timer.stop()
                 else:
                     #self.multiple_download_timer.start(100, self)
-                    self.multiple_download_timer.start(ydlconf.get_sequential_download__timer_interval(), self)
+                    self.multiple_download_timer.start(ydlconf.get_sequential_download_timer_interval(), self)
                 
                 self.multiple_download_progress.setTextVisible(True)
                 self.multiple_download_progress.setFormat("Download: %p%")
@@ -1417,10 +1485,14 @@ class QYoutubeDownloader(QWidget):
                 #tp = ProcessTracker(pc, self.global_message) # modal
                 tp = ProcessTracker(self, pc, self.global_message)
                 pc.status_changed.connect(self.set_download_status)
+                pc.print_message.connect(self.print_concurrent_message)
                 tp.status_changed.connect(self.set_download_button_status)
                 #tp.exec_() #modal
                 tp.show()
                 
+    def print_concurrent_message(self, con_msg):
+        self.global_message.appendPlainText(con_msg)
+        
     def set_download_button_status(self, status):
         if status == ydlconst._ydl_download_start:
             for k in range(self.youtube_path_tbl.rowCount()):
