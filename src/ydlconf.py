@@ -15,100 +15,107 @@ _ydl_config_file = "ydl.conf"
 
 _config = None
 
-class YdlConfig():
-    # youtube-dl
-    _fetch_timeout_duration                = 30 # sec
-    _single_download_timeout_duration      = 60 # sec
-    _sequential_download_timeout_duration  = 60 # sec
-    
-    # timer
-    _single_download_timer_interval          = 100 # milisec
-    _sequential_download_timer_interval      = 100 # ms
-    _concurrent_download_timer_interval      = 100 # ms
-    
-    # concurrent
-    _limit_max_process_count = True
-    _max_process_count       = 10
-    _tracker_max_height      = 200
-
-    def __init__(self):
-        pass
-        
-    def __str__(self):
-        return "Fetch Tmeout             : %d ms\n"\
-               "Single Timeout           : %d ms\n"\
-               "Sequential Timeout       : %d ms\n"\
-               "Single Timer Interval    : %d ms\n"\
-               "Sequential Timer Interval: %d ms\n"\
-               "Concurrent Timer Interval: %d ms\n"\
-               "Limit Max Process Count  : %s\n"\
-               "Max Process Count        : %d\n"\
-               "Tracker Max Height       : %d\n"\
-               %(
-                    YdlConfig._fetch_timeout_duration,
-                    YdlConfig._single_download_timeout_duration,
-                    YdlConfig._sequential_download_timeout_duration,
-                    YdlConfig._single_download_timer_interval,
-                    YdlConfig._sequential_download_timer_interval,
-                    YdlConfig._concurrent_download_timer_interval,
-                    YdlConfig._limit_max_process_count,
-                    YdlConfig._max_process_count,
-                    YdlConfig._tracker_max_height
-               )
-    
-_config_var = YdlConfig()
-
 def dump_config():
-    return str(_config_var)
+    return "filename_pattern         : %s\n"\
+           "Fetch Tmeout             : %s\n"\
+           "Single Timeout           : %s\n"\
+           "Sequential Timeout       : %s\n"\
+           "Concurrent Timeout       : %s\n"\
+           "Encoding                 : %s\n"\
+           "Single Timer Interval    : %s\n"\
+           "Sequential Timer Interval: %s\n"\
+           "Concurrent Timer Interval: %s\n"\
+           "Limit Max Process        : %s\n"\
+           "Max Process              : %s\n"\
+           "Tracker Height           : %s\n"\
+           %(
+                _config["youtube-dl"]["filename_pattern"],
+                _config["youtube-dl"]["fetch_timeout"],
+                _config["youtube-dl"]["single_timeout"],
+                _config["youtube-dl"]["sequential_timeout"],
+                _config["youtube-dl"]["concurrent_timeout"],
+                _config["youtube-dl"]["encoding"],
+                _config["timer"]["single_timer_interval"],
+                _config["timer"]["sequential_timer_interval"],
+                _config["timer"]["concurrent_timer_interval"],
+                _config["concurrent"]["limit_max_process"],
+                _config["concurrent"]["max_process"],
+                _config["concurrent"]["tracker_height"]
+            )
+    
+def get_filename_pattern():
+    return _config["youtube-dl"]["filename_pattern"]
     
 def get_fetch_timeout_duration(): 
-    return YdlConfig._fetch_timeout_duration
+    return _config["youtube-dl"]["fetch_timeout"].split(' ')[0]
     
 def get_single_download_timeout_duration(): 
-    return YdlConfig._single_download_timeout_duration
+    return _config["youtube-dl"]["single_timeout"].split(' ')[0]
     
 def get_sequential_download_timeout_duration(): 
-    return YdlConfig._sequential_download_timeout_duration
+    return _config["youtube-dl"]["sequential_timeout"].split(' ')[0]
+
+def get_concurrent_download_timeout_duration(): 
+    return _config["youtube-dl"]["concurrent_timeout"].split(' ')[0]
+    
+def get_encoding(): 
+    return _config["youtube-dl"]["encoding"]
     
 def get_single_download_timer_interval(): 
-    return YdlConfig._single_download_timer_interval
+    return int(_config["timer"]["single_timer_interval"].split(' ')[0])
     
-def get_sequential_download__timer_interval(): 
-    return YdlConfig._sequential_download__timer_interval    
+def get_sequential_download_timer_interval(): 
+    return int(_config["timer"]["sequential_timer_interval"].split(' ')[0])
     
 def get_concurrent_download_timer_interval(): 
-    return YdlConfig._concurrent_download_timer_interval
+    return int(_config["timer"]["concurrent_timer_interval"].split(' ')[0])
     
-def get_limit_max_process_count(): 
-    return YdlConfig._limit_max_process_count
+def get_limit_max_process(): 
+    return reutil._string_to_bool(_config["concurrent"]["limit_max_process"])
     
-def get_max_process_count(): 
-    return YdlConfig._max_process_count
+def get_max_process(): 
+    return int(_config["concurrent"]["max_process"])
 
-def get_tacker_max_height(): 
-    return YdlConfig._tracker_max_height
+def get_tacker_height(): 
+    return int(_config["concurrent"]["tracker_height"])
     
-def load_config():
+def set_default_config():
     global _config
     
+    _config["youtube-dl"] = {
+            "filename_pattername": "%(title)s-%(id)s.%(ext)s",
+            "fetch_timeout"      : "30 sec",
+            "single_timeout"     : "60 sec",
+            "sequential_timeout" : "60 sec",
+            "encoding"           : "cp949"
+        }
+        
+    _config["timer"] = {
+            "single_timer_interval"      : "100 ms",
+            "sequential_timer_interval"  : "100 ms",
+            "concurrent_timer_interval"  : "50 ms"
+        }
+        
+    _config["concurrent"] = {
+            "limit_max_process" : "True",
+            "max_process"       : "10",
+            "tracker_height"    : "300"
+        }
+    
+def save_config():
+    try:
+        with open(_ydl_config_file, 'w') as f:
+            json.dump(_config, f, ensure_ascii=False, indent=4)
+    except Exception as e:    
+        msg.message_box(str(e), msg.message_error)
+        
+def load_config():
+    global _config
+ 
     try: 
         with open(_ydl_config_file, "rt") as fp:
             _config = json.load(fp)
     except Exception as e:
         msg.message_box(str(e), msg.message_error)
-        return None
-
-    ydl   = _config["youtube-dl"]
-    timer = _config["timer"]
-    concur= _config["concurrent"]
-   
-    YdlConfig._fetch_timeout_duration                 = int(reutil._find_int.search(ydl["fetch_timeout_duration"])[0])
-    YdlConfig._single_download_timeout_duration       = int(reutil._find_int.search(ydl["single_download_timeout_duration"])[0])
-    YdlConfig._sequential_download_timeout_duration   = int(reutil._find_int.search(ydl["sequential_download_timeout_duration"])[0])
-    YdlConfig._single_download_timer_interval         = int(reutil._find_int.search(timer["single_download_timer_interval"])[0])
-    YdlConfig._sequential_download__timer_interval    = int(reutil._find_int.search(timer["sequential_download__timer_interval"])[0])
-    YdlConfig._concurrent_download_timer_interval     = int(reutil._find_int.search(timer["concurrent_download_timer_interval"])[0])
-    YdlConfig._limit_max_process_count                = reutil._string_to_bool(concur["limit_max_process_count"])
-    YdlConfig._max_process_count                      = int(reutil._find_int.search(concur["max_process_count"])[0])
-    YdlConfig._tracker_max_height                     = int(reutil._find_int.search(concur["tracker_max_height"])[0])
-    
+        set_default_config()
+     
