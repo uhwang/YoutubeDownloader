@@ -583,6 +583,7 @@ class QYoutubeDownloader(QWidget):
     def setting_tab_UI(self):
         import icon_apply
         import icon_undo
+        import icon_dump_config
         
         layout = QFormLayout()
         self.config_tree = QTreeWidget()
@@ -618,10 +619,17 @@ class QYoutubeDownloader(QWidget):
         self.save_config_btn.setIconSize(QSize(24,24))
         self.save_config_btn.setToolTip("Save configure")
         self.save_config_btn.clicked.connect(self.save_config)
+
+        self.dump_config_btn = QPushButton()
+        self.dump_config_btn.setIcon(QIcon(QPixmap(icon_dump_config.table)))
+        self.dump_config_btn.setIconSize(QSize(24,24))
+        self.dump_config_btn.setToolTip("Print configure")
+        self.dump_config_btn.clicked.connect(self.dump_config)
         
         resp_lay.addWidget(self.apply_config_btn)
         resp_lay.addWidget(self.undo_config_btn)
         resp_lay.addWidget(self.save_config_btn)
+        resp_lay.addWidget(self.dump_config_btn)
         
         layout.addWidget(self.config_tree)
         layout.addRow(resp_lay)
@@ -639,10 +647,18 @@ class QYoutubeDownloader(QWidget):
                 value = item.child(j).text(1)
                 ydlconf._config[name][field] = value
         
-        self.global_message.appendPlainText("=== New Config ===\n%s"%ydlconf.dump_config())
-        
     def undo_config(self):
         ydlconf.set_default_config()
+        for i in range(self.config_tree.topLevelItemCount()):
+            item = self.config_tree.topLevelItem(i)
+            name = item.text(0)
+            nchild = item.childCount()
+            for j in range(nchild):
+                field = item.child(j).text(0)
+                item.child(j).setText(1, ydlconf._config[name][field])
+        
+    def dump_config(self):
+        self.global_message.appendPlainText(ydlconf.dump_config())
         
     def save_config(self):
         ydlconf.save_config()
@@ -1015,6 +1031,7 @@ class QYoutubeDownloader(QWidget):
     def multiple_video_tab_UI(self):
         import icon_arrow_down
         import icon_arrow_up
+        import icon_append_url
         
         layout = QFormLayout()
         
@@ -1066,6 +1083,12 @@ class QYoutubeDownloader(QWidget):
         self.load_json_btn.setToolTip("Load a list of URLs with JSON format")
         self.load_json_btn.clicked.connect(self.load_json)
         
+        self.append_json_btn = QPushButton('', self)
+        self.append_json_btn.setIcon(QIcon(QPixmap(icon_append_url.table)))
+        self.append_json_btn.setIconSize(QSize(24,24))
+        self.append_json_btn.setToolTip("Append a list of URLs")
+        self.append_json_btn.clicked.connect(partial(self.load_json, True))
+        
         self.save_json_btn = QPushButton('', self)
         self.save_json_btn.setIcon(QIcon(QPixmap(icon_save.table)))
         self.save_json_btn.setIconSize(QSize(24,24))
@@ -1076,8 +1099,9 @@ class QYoutubeDownloader(QWidget):
         self.global_download_format_btn.clicked.connect(self.choose_global_download_format)
 
         grid_table_btn.addWidget(self.load_json_btn, 1, 0)
-        grid_table_btn.addWidget(self.save_json_btn, 1, 1)
-        grid_table_btn.addWidget(self.delete_all_btn, 1, 2)
+        grid_table_btn.addWidget(self.append_json_btn, 1, 1)
+        grid_table_btn.addWidget(self.save_json_btn, 1, 2)
+        grid_table_btn.addWidget(self.delete_all_btn, 1, 3)
         
         grid_option_btn = QGridLayout()
         
@@ -1184,7 +1208,7 @@ class QYoutubeDownloader(QWidget):
         self.global_message.appendPlainText("URL saved at %s"%json_save_file)
         msg.message_box("URL saved at %s"%json_save_file, msg.message_normal)
             
-    def load_json(self):
+    def load_json(self, append=False):
         file = QFileDialog.getOpenFileName(self, "Load JSON", 
                 directory=self.youtube_save_path.text(), 
                 filter="Json (*.json );;All files (*.*)")
@@ -1197,7 +1221,8 @@ class QYoutubeDownloader(QWidget):
             try:
                 with open(file) as f:
                     videos = json.load(f)["videos"]
-                    util.delete_all_item(self.youtube_path_tbl)
+                    if append == False:
+                        util.delete_all_item(self.youtube_path_tbl)
                     cur_row = self.youtube_path_tbl.rowCount()
                     for k, v in enumerate(videos):
                         self.youtube_path_tbl.insertRow(cur_row+k)
