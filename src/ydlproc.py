@@ -10,6 +10,7 @@ from collections import OrderedDict
 from functools import partial
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QObject, QProcess
 import reutil
+import ydlconf
 
 class QProcessProgress(QProcess):
     def __init__(self, key):
@@ -28,6 +29,7 @@ class QProcessProgress(QProcess):
 class ProcessController(QObject):
 
     status_changed = pyqtSignal(QObject)
+    print_message =  pyqtSignal(str)
 
     def __init__(self, job_list, formula = "Proc %d", start_key=0):
         super(ProcessController, self).__init__()
@@ -52,6 +54,7 @@ class ProcessController(QObject):
             self.nproc += 1
 
         for j, p in zip(self.job_list, self.proc_pool.values()):
+            self.print_message.emit("=> cmd\n%s %s\n"%(j[0],' '.join(j[1])))
             p.start(j[0], j[1])
             
     def check_finshed(self, key):
@@ -76,14 +79,15 @@ class ProcessController(QObject):
         
     def read_data(self, key):
         proc = self.proc_pool[key]
-
+        data = None
         try:
+            data = str(proc.readLine(), ydlconf.get_encoding())
             #data = str(proc.readLine(), 'cp949') # For Windows
-            data = str(proc.readLine(), 'utf-8') # For Windows
+            #data = str(proc.readLine(), 'utf-8') 
         except Exception as e:
             proc.error = True
-            #proc.status = "=> [%s] : %s\n%s"%(key, _exception_msg(e), data)
-            proc.status = "=> [%s] : %s\n... %s"%(key, data)
+            proc.status = "=> [%s] : %s\n%s"%(key, reutil._exception_msg(e), 
+                          data if data else "No data received")
             proc.step = 100
             self.status_changed.emit(proc)
             return
