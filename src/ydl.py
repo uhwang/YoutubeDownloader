@@ -604,16 +604,19 @@ class QYoutubeDownloader(QWidget):
         self.apply_config_btn = QPushButton()
         self.apply_config_btn.setIcon(QIcon(QPixmap(icon_apply.table)))
         self.apply_config_btn.setIconSize(QSize(24,24))
+        self.apply_config_btn.setToolTip("Apply current configure")
         self.apply_config_btn.clicked.connect(self.apply_config)
 
         self.undo_config_btn = QPushButton()
         self.undo_config_btn.setIcon(QIcon(QPixmap(icon_undo.table)))
         self.undo_config_btn.setIconSize(QSize(24,24))
+        self.undo_config_btn.setToolTip("Set default value")
         self.undo_config_btn.clicked.connect(self.undo_config)
         
         self.save_config_btn = QPushButton()
         self.save_config_btn.setIcon(QIcon(QPixmap(icon_save.table)))
         self.save_config_btn.setIconSize(QSize(24,24))
+        self.save_config_btn.setToolTip("Save configure")
         self.save_config_btn.clicked.connect(self.save_config)
         
         resp_lay.addWidget(self.apply_config_btn)
