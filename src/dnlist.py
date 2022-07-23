@@ -15,6 +15,7 @@ import util
 import reutil
 import ydlproc
 import ydlconst
+import ydlconf
 
 class QCreateVideoListFromURL(QObject):
 
@@ -52,7 +53,7 @@ class QCreateVideoListFromURL(QObject):
         
         try:
             #data = str(self.proc.readLine(), 'cp949') # Windows 
-            data = str(self.proc.readAll(), 'cp949') # Windows 
+            data = str(self.proc.readAll(), ydlconf.get_encoding()) # Windows 
         except Exception as e:
             self._msg.appendPlainText(_exception_msg(e))
             return
