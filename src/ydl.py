@@ -256,7 +256,6 @@ class ProcessTracker(QDialog):
         self.widget.setLayout(grid)
         self.scroll = QScrollArea()
         self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        #self.scroll.setMaximumHeight(200)
         self.scroll.setMaximumHeight(ydlconf.get_tacker_height())
         self.scroll.setWidget(self.widget)
         self.scroll.setWidgetResizable(True)
@@ -320,7 +319,6 @@ class ProcessTracker(QDialog):
         if self.timer.isActive():
             self.timer.stop()
         else:
-            #self.timer.start(100, self)
             self.timer.start(ydlconf.get_concurrent_download_timer_interval(), self)
         
         try:
@@ -458,6 +456,10 @@ class QYoutubeDownloadFormatDlg(QDialog):
     def fetch_youtube_format(self):
         util.delete_all_item(self.youtube_format_tbl, None)
         url = self.url_table.item(self.url_cmb.currentIndex(),0).text()
+        if url.find("vimeo") > -1:
+            msg.message_box("Doesn't work on Vimeo!", msg.message_warning)
+            return
+            
         util.fetch_youtube_format_from_url(url, self.youtube_format_tbl, self.msg)
         
     def get_format(self):
@@ -585,10 +587,20 @@ class QYoutubeDownloader(QWidget):
         import icon_undo
         import icon_dump_config
         
+        # https://doc.qt.io/qtforpython/overviews/stylesheet-examples.html
+        style = '''QTreeWidget::item:selected:active{
+                background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #6ea1f1, stop: 1 #567dbc);
+                }
+                QTreeView::item:hover {
+                background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #e7effd, stop: 1 #cbdaf1);
+                border: 1px solid #bfcde4;
+                }
+                '''
         layout = QFormLayout()
         self.config_tree = QTreeWidget()
         self.config_tree.setColumnCount(2)
         self.config_tree.setHeaderLabels(["Name", "Value"])
+        self.config_tree.setStyleSheet(style)
         
         for key1, item1 in ydlconf._config.items():
             tree_item = QTreeWidgetItem(self.config_tree)
@@ -1268,11 +1280,16 @@ class QYoutubeDownloader(QWidget):
                 
         self.global_message.appendPlainText("=> Fetch video formats")
         util.delete_all_item(self.youtube_format_tbl, self.choose_format_cmb)
+        url = self.youtube_url.text()
         
+        if url.find("vimeo") > -1:
+            msg.message_box("Doesn't work on Vimeo", msg.message_warning)
+            return
+            
         frm = util.fetch_youtube_format_from_url(
-            self.youtube_url.text(),
-            self.youtube_format_tbl,
-            self.global_message)
+              url,
+              self.youtube_format_tbl,
+              self.global_message)
         if frm:
             self.choose_format_cmb.addItems(frm)
     
@@ -1290,6 +1307,7 @@ class QYoutubeDownloader(QWidget):
             
         if reutil._find_ydl_error(data):
             self.process_single_error = True
+            self.global_message.appendPlainText("=> %s\n"%data)
             msg.message_box(data, msg.message_error)
             return
             
@@ -1544,10 +1562,10 @@ class QYoutubeDownloader(QWidget):
             
     def start_single_download(self):
         url = self.youtube_url.text()
-        match = reutil._valid_youtube_url.search(url)
-        if not match:
-            msg.message_box("Invalid URL", msg.message_error)
-            return
+        #match = reutil._valid_youtube_url.search(url)
+        #if not match:
+        #    msg.message_box("Invalid URL", msg.message_error)
+        #    return
         
         tab_text = self.youtube_tabs.tabText(self.youtube_tabs.currentIndex())
         
@@ -1632,7 +1650,7 @@ class QYoutubeDownloader(QWidget):
             self.process_single_error = False
             self.single_file_already_exist = False
             try:
-                self.global_message.appendPlainText("%s\n"%util.cmd_to_msg(sublist[0], sublist[1]))
+                self.global_message.appendPlainText("=> cmd\n%s %s\n"%(sublist[0], ' '.join(sublist[1])))
                 self.process_single.start(sublist[0], sublist[1])
             except (IOError, OSError) as err:
                 QMessageBox.question(self, 'Error', "%s"%err)
