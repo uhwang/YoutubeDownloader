@@ -54,7 +54,7 @@ class ProcessController(QObject):
             self.nproc += 1
 
         for j, p in zip(self.job_list, self.proc_pool.values()):
-            self.print_message.emit("=> cmd\n%s %s\n"%(j[0],' '.join(j[1])))
+            self.print_message.emit("=> cmd(%s)\n%s %s\n"%(key, j[0],' '.join(j[1])))
             p.start(j[0], j[1])
             
     def check_finshed(self, key):
@@ -94,7 +94,7 @@ class ProcessController(QObject):
             
         if reutil._find_ydl_error(data):
             proc.error = True
-            proc.status = data
+            proc.status = "=> %s\n%s\n"%(key,data)
             proc.step = 100
             self.status_changed.emit(proc)
             return
