@@ -39,7 +39,8 @@ def get_youtube_formats(url, pmsg=None):
     	
     output = proc.communicate()[0]
     # http:#stackoverflow.com/questions/606191/convert-bytes-to-a-python-string
-    output = output.decode('utf-8')
+    #output = output.decode('utf-8')
+    output = output.decode(ydlconf.get_encoding())
 
     # output is a long stream characters
     if reutil._find_error.search(output):
@@ -81,15 +82,16 @@ def get_youtube_format_from_formats(format):
     
 def fetch_youtube_format_from_url(url, tbl, pmsg=None):
 
-    if not reutil._valid_youtube_url.search(url):
-        msg.message_box("Invalid URL", msg.message_error)
-        return None
+    #if not reutil._valid_youtube_url.search(url):
+    #    msg.message_box("Invalid URL", msg.message_error)
+    #    return None
 
     if url == '':
         return None
     
     formats = get_youtube_formats(url, pmsg)
-    if formats == None: return
+    if formats == None: 
+        return None
     
     frm = ["None"]
     
