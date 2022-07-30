@@ -16,6 +16,7 @@ import reutil
 import ydlproc
 import ydlconst
 import ydlconf
+import msg
 
 class QCreateVideoListFromURL(QObject):
 
@@ -52,15 +53,19 @@ class QCreateVideoListFromURL(QObject):
     def read_data(self):
         
         try:
-            #data = str(self.proc.readLine(), 'cp949') # Windows 
-            data = str(self.proc.readAll(), ydlconf.get_encoding()) # Windows 
+            data = str(self.proc.readAll(), ydlconf.get_encoding())
         except Exception as e:
-            self._msg.appendPlainText(_exception_msg(e))
+            err_msg = "Exception (QCreateVideoListFromURL)\n"\
+                      "... proc.readAll()\n... %s"%reutil._exception_msg(e)
+            self._msg.appendPlainText(err_msg)
+            self.status_changed.emit(err_msg)
             return
             
         if reutil._find_error.search(data):
-            self._msg.appendPlainText(data)
-            self.status_changed.emit(data)
+            err_msg = "Error (QCreateVideoListFromURL)\n"\
+                      "... _find_error\n... %s"%data
+            self._msg.appendPlainText(err_msg)
+            self.status_changed.emit(err_msg)
             return
             
         m = reutil._find_video_sequence.search(data)
