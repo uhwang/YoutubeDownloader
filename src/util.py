@@ -41,7 +41,7 @@ def get_youtube_formats(url, pmsg=None):
         proc = sp.Popen(cmd, stdout=sp.PIPE, stderr = sp.STDOUT)
     except Exception as e:
         err_msg = "=> Error(get_youtube_formats)\n"\
-                  "... %s\n"%reutil._exception_msg(e)
+                  "... sp.Popen : %s\n"%reutil._exception_msg(e)
         if pmsg: pmsg.appendPlainText(err_msg)
         msg.message_box(err_msg, msg.message_error)
         return None
@@ -53,8 +53,10 @@ def get_youtube_formats(url, pmsg=None):
 
     # output is a long stream characters
     if reutil._find_error.search(output):
-        if pmsg: pmsg.appendPlainText(output)
-        msg.message_box("Error: can't fetch formats\nnCheck the message!", msg.message_error)
+        err_msg = "=> Error(get_youtube_formats)\n"\
+                  "... _find_error : %s"%output
+        if pmsg: pmsg.appendPlainText(err_msg)
+        msg.message_box("Error: can't fetch formats\nCheck the message!", msg.message_error)
         return None
 
     # output is a list of strings
