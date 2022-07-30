@@ -326,8 +326,9 @@ class ProcessTracker(QDialog):
         try:
             self.proc_ctrl.start()
         except Exception as e:
-            msg.message_box("Error: %s"%e, msg.message_error)
-            self.msg.appendPlainText("=> Error: %s"%e)
+            err_msg = "Error(ProcessTracker)\n... start_download\n...%s"%reutil._exception_msg(e)
+            msg.message_box(err_msg, msg.message_error)
+            self.msg.appendPlainText("=> %s\n"%err_msg)
             self.enable_download_buttons()        
             
     def disable_download_buttons(self):
@@ -782,9 +783,10 @@ class QYoutubeDownloader(QWidget):
             
     def create_video_list(self):
         url = self.video_url.text()
-        if not reutil._valid_youtube_url.search(url):
-            msg.message_box("Invalid URL", msg.message_error)
-            return None
+        
+        if reutil._url_is_vimeo(url):
+            msg.message_box("Invalid Youtube URL", msg.message_error)
+            return
             
         self.create_vlist = dnlist.QCreateVideoListFromURL(url, self.vlist_message)
         self.create_vlist.status_changed.connect(self.get_create_vlist_status)
@@ -848,8 +850,11 @@ class QYoutubeDownloader(QWidget):
             with open(json_save_file, 'w') as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
         except Exception as e:
-            self.global_message.appendPlainText("=> Error(save_json) : %s"%str(e))
-            msg.message_box(str(e), msg.message_error)
+            err_msg = "Error(save_vlist_json)\n%s"%_exception_msg(e)
+            self.global_message.appendPlainText("=> %s\n"%err_msg)
+            msg.message_box(err_msg, msg.message_error)
+            return
+            
         self.global_message.appendPlainText("URL saved at %s"%json_save_file)
         msg.message_box("URL saved at %s"%json_save_file, msg.message_normal)
         
@@ -1251,8 +1256,11 @@ class QYoutubeDownloader(QWidget):
             with open(json_save_file, 'w') as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
         except Exception as e:
-            self.global_message.appendPlainText("=> Error(save_json) : %s"%str(e))
-            msg.message_box(str(e), msg.message_error)
+            err_msg = "Error(save_json)\n%s"%reutil._exception_msg(e)
+            self.global_message.appendPlainText("=> %s\n"%err_msg)
+            msg.message_box(err_msg, msg.message_error)
+            return
+            
         self.global_message.appendPlainText("URL saved at %s"%json_save_file)
         msg.message_box("URL saved at %s"%json_save_file, msg.message_normal)
             
@@ -1282,8 +1290,9 @@ class QYoutubeDownloader(QWidget):
                             QTableWidgetItem(""))                            
                     self.global_message.appendPlainText("=> Load Json: total vidoe(%d)"%(k+1))
             except Exception as e:
-                msg.message_box(str(e), msg.message_error)
-                return
+                err_msg = "Error(load_json)\n%s"%reutil._exception_msg(e)
+                self.global_message.appendPlainText("=> %s\n"%err_msg)
+                msg.message_box(err_msg, msg.message_error)
         
     def choose_global_download_format(self):
         nurl = self.youtube_path_tbl.rowCount()
@@ -1318,7 +1327,7 @@ class QYoutubeDownloader(QWidget):
         util.delete_all_item(self.youtube_format_tbl, self.choose_format_cmb)
         url = self.youtube_url.text()
         
-        if url.find("vimeo") > -1:
+        if reutil._url_is_vimeo(url):
             msg.message_box("Doesn't work on Vimeo", msg.message_warning)
             return
             
@@ -1335,15 +1344,19 @@ class QYoutubeDownloader(QWidget):
             #data = str(self.process_single.readLine(), 'cp949') # Windows 
             data = str(self.process_single.readLine(), ydlconf.get_encoding()) # Windows 
         except Exception as e:
-            self.global_message.appendPlainText(_exception_msg(e))
+            err_msg = "Error(single_download_data_read)\n"\
+                      "... process_single.readLine\n... %s"%reutil._exception_msg(e)
+            self.global_message.appendPlainText("=> %s\n"%err_msg)
+            msg.message_box(err_msg, msg.message_error)
             return
 
         if reutil._find_ydl_warning(data):
             self.global_message.appendPlainText("=> %s\n"%data)
             
         if reutil._find_ydl_error(data):
+            err_msg = "Error(single_download_data_read)\n... _find_ydl_error\n... %s"%data
             self.process_single_error = True
-            self.global_message.appendPlainText("=> %s\n"%data)
+            self.global_message.appendPlainText("=> %s\n"%err_msg)
             msg.message_box(data, msg.message_error)
             return
             
@@ -1374,18 +1387,21 @@ class QYoutubeDownloader(QWidget):
          
     def multiple_download_data_read(self):
         try:
-            #data = str(self.process_multiple.readAll(), 'utf-8')
-            #data = str(self.process_multiple.readLine(), 'cp949') # for Windows
             data = str(self.process_multiple.readLine(), ydlconf.get_encoding()) 
         except Exception as e:
-            self.global_message.appendPlainText(_exception_msg(e))
+            err_msg = "Error (multiple_download_data_read)\n"\
+                      "... process_multiple.readLine\n... %s"%reutil._exception_msg(e)
+            self.global_message.appendPlainText("=> %s\n"%err_msg)
+            #msg.message_box(err_msg, msg.message_error)
             return
         
         if reutil._find_ydl_error(data):
+            err_msg = "Error(multiple_download_data_read)\n"\
+                      "... _find_ydl_error [%d-th]\n... %s"%(self.download_count, data)
             self.process_multiple_error = True
             self.youtube_path_tbl.item(self.download_count, 0).setBackground(ydlcolor._ydl_color_error)
             self.youtube_path_tbl.item(self.download_count, 2).setText("Error")
-            self.global_message.appendPlainText("=> %s\n"%data)
+            self.global_message.appendPlainText("=> %s\n"%err_msg)
             #msg.message_box("URL: #%d\n%s"%(self.download_count,data), msg.message_error)
             return
 
@@ -1440,8 +1456,11 @@ class QYoutubeDownloader(QWidget):
             self.process_multiple_file_exis = False
             self.global_message.appendPlainText(util.cmd_to_msg(sublist[0], sublist[1]))
             self.process_multiple.start(sublist[0], sublist[1])
-        except (IOError, OSError) as err:
-            QMessageBox.question(self, 'Error', "%s"%err)
+        except Exception as e:
+            err_msg = "Error(multiple_download_finished)\n... [%d-th]: %s"%\
+                      (self.download_count, reutil._exception_msg(e))
+            self.global_message.appendPlainText("=> %s\n"%err_msg)
+            msg.message_box(err_msg, msg.message_yesno)
             self.delete_job_list()
             self.enable_multiple_download_buttons()
                         
@@ -1477,7 +1496,7 @@ class QYoutubeDownloader(QWidget):
     def cancel_multiple_download(self):
         if not self.process_multiple: return
         if self.multiple_download_method.currentText() == funs.get_sequential_download_text():
-            self.global_message.appendPlainText("=> Cancel Multiple Download")
+            self.global_message.appendPlainText("=> Cancel Multiple Download\n")
             self.single_download_timer.stop()
             self.multiple_download_job_list.clear()
             self.process_multiple.kill()
@@ -1543,7 +1562,6 @@ class QYoutubeDownloader(QWidget):
                 if self.single_download_timer.isActive():
                     self.multiple_download_timer.stop()
                 else:
-                    #self.multiple_download_timer.start(100, self)
                     self.multiple_download_timer.start(ydlconf.get_sequential_download_timer_interval(), self)
                 
                 self.multiple_download_progress.setTextVisible(True)
@@ -1555,22 +1573,26 @@ class QYoutubeDownloader(QWidget):
                 self.process_multiple_file_exist = False
                 
                 try:
-                    self.global_message.appendPlainText(util.cmd_to_msg(sublist[0], sublist[1]))
+                    self.global_message.appendPlainText("=> cmd\n%s %s\n"%(sublist[0], ' '.join(sublist[1])))
                     self.process_multiple.start(sublist[0], sublist[1])
-                except (IOError, OSError) as err:
-                    QMessageBox.question(self, 'Error', "%s"%err)
-                    self.global_message.appendPlainText("=> Error: %s\n"%err)
-                    self.enable_single_download_buttons()
+                except Exception as e:
+                    err_msg = "Error(start_multiple_download)\n"\
+                              "... Sequential [%d-th]: %s"%(self.download_count, reutil._exception_msg(e))
+                    self.global_message.appendPlainText("=> %s\n"%err_msg)
+                    msg.message_box(err_msg, msg.message_error)
+                    self.delete_job_list()
+                    self.enable_multiple_download_buttons()
+                    
             elif dm == funs.get_concurrent_download_text():
                 self.disable_multiple_parent_buttons()
                 pc = ydlproc.ProcessController(self.multiple_download_job_list)
-                #tp = ProcessTracker(pc, self.global_message) # modal
-                tp = ProcessTracker(self, pc, self.global_message)
+                #pt = ProcessTracker(pc, self.global_message) # modal
+                pt = ProcessTracker(self, pc, self.global_message)
                 pc.status_changed.connect(self.set_download_status)
                 pc.print_message.connect(self.print_concurrent_message)
-                tp.status_changed.connect(self.set_download_button_status)
-                #tp.exec_() #modal
-                tp.show()
+                pt.status_changed.connect(self.set_download_button_status)
+                #pt.exec_() #modal
+                pt.show()
                 
     def print_concurrent_message(self, con_msg):
         self.global_message.appendPlainText(con_msg)
@@ -1688,9 +1710,10 @@ class QYoutubeDownloader(QWidget):
             try:
                 self.global_message.appendPlainText("=> cmd\n%s %s\n"%(sublist[0], ' '.join(sublist[1])))
                 self.process_single.start(sublist[0], sublist[1])
-            except (IOError, OSError) as err:
-                QMessageBox.question(self, 'Error', "%s"%err)
-                self.global_message.appendPlainText("=> Error: %s\n"%err)
+            except Exception as e:
+                err_msg = "Error(start_single_download)\n%s"%reutil._exception_msg(e)
+                self.global_message.appendPlainText("=> %s\n"%err_msg)
+                msg.message_box(err_msg, msg.message_error)
                 self.enable_single_download_buttons()
     
     def cancel_single_download(self):
