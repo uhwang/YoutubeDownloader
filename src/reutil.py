@@ -32,8 +32,11 @@ _find_ydl_error  = lambda x: x.strip() if x.find(ydlconst._ydl_const_error) >= 0
 _find_ydl_warning= lambda x: x.strip() if x.find(ydlconst._ydl_const_warning) >= 0 else None
 _file_exist      = lambda x: True if x.find(ydlconst._ydl_const_exist) >= 0 else False
 _find_filename   = lambda x: x.split(ydlconst._ydl_const_filename)[1] if x.find(ydlconst._ydl_const_filename) >= 0 else None
-_exception_msg   = lambda e: "=> {0} : {1}".format(type(e).__name__, str(e))
+_exception_msg   = lambda e: "{0} : {1}".format(type(e).__name__, str(e))
 _string_to_bool  = lambda x: True if x.lower() == "true" else False
+_yesno_to_bool   = lambda x: True if x.lower() == "yes" else False
 
 _find_vlist_range = re.compile("(\d+)-(\d+)")
 _find_video_sequence = re.compile("(\d+) of (\d+)")
+
+_url_is_vimeo = lambda x: True if x.lower().find("vimeo") > -1 else False
