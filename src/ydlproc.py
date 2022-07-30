@@ -86,7 +86,10 @@ class ProcessController(QObject):
             #data = str(proc.readLine(), 'utf-8') 
         except Exception as e:
             proc.error = True
-            proc.status = "=> [%s] : %s\n%s"%(key, reutil._exception_msg(e), 
+            proc.status = "=> Error(ProcessController)\n"\
+                          "... read_data (proc.readLine)\n"\
+                          "... [%s] : %s\n... %s"%\
+                          (key, reutil._exception_msg(e), 
                           data if data else "No data received")
             proc.step = 100
             self.status_changed.emit(proc)
@@ -94,7 +97,10 @@ class ProcessController(QObject):
             
         if reutil._find_ydl_error(data):
             proc.error = True
-            proc.status = "=> %s\n%s\n"%(key,data)
+            proc.status = "=> Error(ProcessController)\n"\
+                          "... read_data (_find_ydl_error)\n"\
+                          "... [%s] : %s\n"%\
+                          (key,data)
             proc.step = 100
             self.status_changed.emit(proc)
             return
