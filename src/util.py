@@ -15,6 +15,13 @@ import ydlconst
 import ydlconf
 import reutil
 
+# edit : QLineEdit
+def clear_url_input(edit):
+    edit.clear()
+
+def copy_url_input(edit, clipboard):
+    edit.setText(clipboard.text())
+    
 def time_to_sec(t1):
     t2 = reutil._find_time.search(t1)
     sec = 60*(int(t2.group(1))*60+int(t2.group(2)))+int(t2.group(3))+ float(t2.group(4))*.01
