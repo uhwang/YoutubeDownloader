@@ -98,6 +98,8 @@ import ydlconf
 import funs
 import dnlist
 
+_clipboard = None
+
 class Postprocess:
     def __init__(self):
         self.use_ffmpeg = False
@@ -689,6 +691,8 @@ class QYoutubeDownloader(QWidget):
     def create_vlist_tab_UI(self):
         import icon_start_vlist
         import icon_stop_vlist
+        import icon_clear_url_input
+        import icon_copy_url_input
         
         self.create_vlist = None
         
@@ -697,8 +701,23 @@ class QYoutubeDownloader(QWidget):
         grid = QGridLayout()
         grid.addWidget(QLabel("URL"), 1,0)
         self.video_url = QLineEdit()
-        grid.addWidget(self.video_url, 1, 1)
 
+        self.clear_url_btn = QPushButton('', self)
+        self.clear_url_btn.setIcon(QIcon(QPixmap(icon_clear_url_input.table)))
+        self.clear_url_btn.setIconSize(QSize(16,16))
+        self.clear_url_btn.setToolTip("Clear url input")
+        self.clear_url_btn.clicked.connect(partial(util.clear_url_input, self.video_url))
+        
+        self.copy_url_btn = QPushButton('', self)
+        self.copy_url_btn.setIcon(QIcon(QPixmap(icon_copy_url_input.table)))
+        self.copy_url_btn.setIconSize(QSize(16,16))
+        self.copy_url_btn.setToolTip("Copy a url from clipboard")
+        self.copy_url_btn.clicked.connect(partial(util.copy_url_input, self.video_url, _clipboard))
+        
+        grid.addWidget(self.video_url, 1, 1)
+        grid.addWidget(self.clear_url_btn, 1, 2)
+        grid.addWidget(self.copy_url_btn, 1, 3)
+                
         self.vlist_message = QPlainTextEdit()
 
         save_lay = QHBoxLayout()
@@ -836,13 +855,30 @@ class QYoutubeDownloader(QWidget):
         
     def single_video_tab_UI(self):
         import icon_media_edit
+        import icon_clear_url_input
+        import icon_copy_url_input
         
         # single video download
         layout = QFormLayout()
         grid = QGridLayout()
         grid.addWidget(QLabel("URL"), 1,0)
         self.youtube_url = QLineEdit()
+
+        self.clear_url_btn = QPushButton('', self)
+        self.clear_url_btn.setIcon(QIcon(QPixmap(icon_clear_url_input.table)))
+        self.clear_url_btn.setIconSize(QSize(16,16))
+        self.clear_url_btn.setToolTip("Clear url input")
+        self.clear_url_btn.clicked.connect(partial(util.clear_url_input, self.youtube_url))
+        
+        self.copy_url_btn = QPushButton('', self)
+        self.copy_url_btn.setIcon(QIcon(QPixmap(icon_copy_url_input.table)))
+        self.copy_url_btn.setIconSize(QSize(16,16))
+        self.copy_url_btn.setToolTip("Copy a url from clipboard")
+        self.copy_url_btn.clicked.connect(partial(util.copy_url_input, self.youtube_url, _clipboard))
+        
         grid.addWidget(self.youtube_url, 1, 1)
+        grid.addWidget(self.clear_url_btn, 1, 2)
+        grid.addWidget(self.copy_url_btn, 1, 3)
         
         self.youtube_format_tbl = QTableWidget()
         self.youtube_format_tbl.verticalHeader().hide()
@@ -1666,7 +1702,10 @@ class QYoutubeDownloader(QWidget):
             self.single_download_timer.stop()
     
 def main():
+    global _clipboard
+    
     app = QApplication(sys.argv)
+    _clipboard = app.clipboard()
 
     # --- PyQt4 Only
     #app.setStyle(QStyleFactory.create(u'Motif'))
