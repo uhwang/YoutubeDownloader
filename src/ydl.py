@@ -778,10 +778,11 @@ class QYoutubeDownloader(QWidget):
         self.create_vlist_tab.setLayout(layout)
         
     def copy_vlist(self):
-        self.vlist_copy = self.create_vlist_jason()
+        self.vlist_copy, ncopy = self.create_vlist_jason()
         if self.vlist_copy == None:
             msg.message_box("Error: no video list exist!", msg.message_error)
             return
+        msg.message_box("%d list copied!"%ncopy, msg.message_normal)
         
     def create_vlist_jason(self):
         if not self.create_vlist:
@@ -820,10 +821,11 @@ class QYoutubeDownloader(QWidget):
             v_list.append({"desc": desc, "url": url})
         vlist_data["videos"] = v_list
         
-        return vlist_data
+        return vlist_data, v2-v1
             
     def clear_vlist_msg(self):
         self.vlist_message.clear()
+        self.vlist_copy = None
         
     def save_all_vlist_changed(self):
         if self.save_all_vlist_chk.isChecked():
@@ -854,7 +856,7 @@ class QYoutubeDownloader(QWidget):
         
     def save_vlist_json(self):
 
-        data = self.create_vlist_jason()
+        data, _ = self.create_vlist_jason()
         if data == None:
             return
             
