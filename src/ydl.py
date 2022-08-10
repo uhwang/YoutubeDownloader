@@ -422,7 +422,6 @@ class QYoutubeDownloadFormatDlg(QDialog):
         self.direct_format.setValidator(onlyInt)
         self.direct_format.setEnabled(False)
         
-        
         self.ok = QPushButton('OK')
         self.cancel = QPushButton('CANCEL')
         self.ok.clicked.connect(self.accept)
@@ -690,12 +689,14 @@ class QYoutubeDownloader(QWidget):
         pass
         
     def create_vlist_tab_UI(self):
-        import icon_start_vlist
-        import icon_stop_vlist
+        import icon_startvlist
+        import icon_stopvlist
         import icon_clear_url_input
         import icon_copy_url_input
+        import icon_copyvlist
         
         self.create_vlist = None
+        self.vlist_copy = None
         
         layout = QFormLayout()
 
@@ -734,15 +735,21 @@ class QYoutubeDownloader(QWidget):
         save_lay.addWidget(self.video_list_range)
         
         ans_lay = QHBoxLayout()
-        self.create_vlist_btn = QPushButton("Start")
-        self.create_vlist_btn.setIcon(QIcon(QPixmap(icon_start_vlist.table)))
+        self.create_vlist_btn = QPushButton()
+        self.create_vlist_btn.setIcon(QIcon(QPixmap(icon_startvlist.table)))
         self.create_vlist_btn.setIconSize(QSize(24,24))
         self.create_vlist_btn.clicked.connect(self.create_video_list)
         
-        self.cancel_create_vlist_btn = QPushButton("Stop")
-        self.cancel_create_vlist_btn.setIcon(QIcon(QPixmap(icon_stop_vlist.table)))
+        self.cancel_create_vlist_btn = QPushButton()
+        self.cancel_create_vlist_btn.setIcon(QIcon(QPixmap(icon_stopvlist.table)))
         self.cancel_create_vlist_btn.setIconSize(QSize(24, 24))
         self.cancel_create_vlist_btn.clicked.connect(self.cancel_create_vlist)
+
+        self.copy_vlist_btn = QPushButton('', self)
+        self.copy_vlist_btn.setIcon(QIcon(QPixmap(icon_copyvlist.table)))
+        self.copy_vlist_btn.setIconSize(QSize(24,24))
+        self.copy_vlist_btn.setToolTip("Copy the video list")
+        self.copy_vlist_btn.clicked.connect(self.copy_vlist)
 
         self.save_vlist_json_btn = QPushButton('', self)
         self.save_vlist_json_btn.setIcon(QIcon(QPixmap(icon_save.table)))
@@ -758,6 +765,7 @@ class QYoutubeDownloader(QWidget):
         
         ans_lay.addWidget(self.create_vlist_btn)
         ans_lay.addWidget(self.cancel_create_vlist_btn)
+        ans_lay.addWidget(self.copy_vlist_btn)
         ans_lay.addWidget(self.clear_vlist_msg_btn)
         ans_lay.addWidget(self.save_vlist_json_btn)
 
@@ -769,6 +777,51 @@ class QYoutubeDownloader(QWidget):
         layout.addRow(ans_lay)
         self.create_vlist_tab.setLayout(layout)
         
+    def copy_vlist(self):
+        self.vlist_copy = self.create_vlist_jason()
+        if self.vlist_copy == None:
+            msg.message_box("Error: no video list exist!", msg.message_error)
+            return
+        
+    def create_vlist_jason(self):
+        if not self.create_vlist:
+            return None
+            
+        count = self.create_vlist._video_count
+        if count == 0: 
+            return None
+
+        if self.save_all_vlist_chk.isChecked():
+            v1 = 0
+            v2 = count
+        else:
+            num_range = self.video_list_range.text()
+            m = reutil._find_vlist_range.search(num_range)
+            if not m:
+                err_msg = "Error: invalid number range\n%s"%num_range
+                self.vlist_message.appendPlainText(err_msg)
+                msg.message_box(err_msg, msg.message_error)
+                return None
+                
+            v1 = int(m[1])-1
+            v2 = int(m[2])
+            if v1 < 0 or v2 > count:
+                err_msg = "Error: Invalid number(%s)"%num_range
+                self.vlist_message.appendPlainText(err_msg)
+                msg.message_box(err_msg, msg.message_error)
+                return None
+                
+        vlist_data = OrderedDict()
+        v_list = list()
+        
+        for k in range(v1, v2):
+            url = self.create_vlist._video_list[k]
+            desc = "%d of %d"%(k+1, self.create_vlist._video_count)
+            v_list.append({"desc": desc, "url": url})
+        vlist_data["videos"] = v_list
+        
+        return vlist_data
+            
     def clear_vlist_msg(self):
         self.vlist_message.clear()
         
@@ -800,30 +853,10 @@ class QYoutubeDownloader(QWidget):
                 self.vlist_message.appendPlainText("... Job Canceled")
         
     def save_vlist_json(self):
-        if not self.create_vlist:
-            return
-            
-        count = self.create_vlist._video_count
-        if count == 0: return
 
-        if self.save_all_vlist_chk.isChecked():
-            v1 = 0
-            v2 = count
-        else:
-            num_range = self.video_list_range.text()
-            m = reutil._find_vlist_range.search(num_range)
-            if not m:
-                err_msg = "Error: invalid number range\n%s"%num_range
-                self.vlist_message.appendPlainText(err_msg)
-                msg.message_box(err_msg, msg.message_error)
-                return
-            v1 = int(m[1])-1
-            v2 = int(m[2])
-            if v1 < 0 or v2 > count:
-                err_msg = "Error: Invalid number(%s)"%num_range
-                self.vlist_message.appendPlainText(err_msg)
-                msg.message_box(err_msg, msg.message_error)
-                return
+        data = self.create_vlist_jason()
+        if data == None:
+            return
             
         json_export_file = 'ydl_url_list.json'
         json_save_path = os.path.join(self.youtube_save_path.text(), json_export_file)
@@ -837,15 +870,6 @@ class QYoutubeDownloader(QWidget):
         if json_save_file.find(".json") == -1:
             json_save_file += ".json"
         
-        data = OrderedDict()
-        v_list = list()
-        
-        for k in range(v1, v2):
-            url = self.create_vlist._video_list[k]
-            desc = "%d of %d"%(k+1, self.create_vlist._video_count)
-            v_list.append({"desc": desc, "url": url})
-        data["videos"] = v_list
-            
         try:
             with open(json_save_file, 'w') as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
@@ -1085,6 +1109,7 @@ class QYoutubeDownloader(QWidget):
         import icon_arrow_down
         import icon_arrow_up
         import icon_append_url
+        import icon_copyvlist
         
         layout = QFormLayout()
         
@@ -1129,6 +1154,7 @@ class QYoutubeDownloader(QWidget):
         grid_table_btn.addWidget(self.move_url_up_btn, 0, 1)
         grid_table_btn.addWidget(self.move_url_down_btn, 0, 2)
         grid_table_btn.addWidget(self.delete_btn, 0, 3)
+        grid_table_btn.addWidget(self.delete_all_btn, 0, 4)
 
         self.load_json_btn = QPushButton('', self)
         self.load_json_btn.setIcon(QIcon(QPixmap(icon_json.table)))
@@ -1142,6 +1168,12 @@ class QYoutubeDownloader(QWidget):
         self.append_json_btn.setToolTip("Append a list of URLs")
         self.append_json_btn.clicked.connect(partial(self.load_json, True))
         
+        self.paste_vlist_btn = QPushButton('', self)
+        self.paste_vlist_btn.setIcon(QIcon(QPixmap(icon_copyvlist.table)))
+        self.paste_vlist_btn.setIconSize(QSize(24,24))
+        self.paste_vlist_btn.setToolTip("Paste the video list")
+        self.paste_vlist_btn.clicked.connect(self.paste_vlist)
+        
         self.save_json_btn = QPushButton('', self)
         self.save_json_btn.setIcon(QIcon(QPixmap(icon_save.table)))
         self.save_json_btn.setIconSize(QSize(24,24))
@@ -1154,7 +1186,7 @@ class QYoutubeDownloader(QWidget):
         grid_table_btn.addWidget(self.load_json_btn, 1, 0)
         grid_table_btn.addWidget(self.append_json_btn, 1, 1)
         grid_table_btn.addWidget(self.save_json_btn, 1, 2)
-        grid_table_btn.addWidget(self.delete_all_btn, 1, 3)
+        grid_table_btn.addWidget(self.paste_vlist_btn, 1, 3)
         
         grid_option_btn = QGridLayout()
         
@@ -1226,6 +1258,29 @@ class QYoutubeDownloader(QWidget):
         layout.addRow(run_option)
         
         self.multiple_video_tab.setLayout(layout)
+        
+    def paste_vlist(self):
+        if self.vlist_copy == None:
+            msg.message_box("Error: no video list exist!", msg.message_error)
+            return
+
+        cur_row = self.youtube_path_tbl.rowCount()
+        
+        if cur_row > 0:
+            res = msg.message_box("Do you want to DELETE all current URLs?", msg.message_yesno)
+            if res == QMessageBox.Yes:
+                util.delete_all_item(self.youtube_path_tbl)
+        
+        videos = self.vlist_copy["videos"]
+        
+        for k, v in enumerate(videos):
+            self.youtube_path_tbl.insertRow(cur_row+k)
+            self.youtube_path_tbl.setItem(cur_row+k, 0, 
+                QTableWidgetItem(v["url"]))
+            self.youtube_path_tbl.setItem(cur_row+k, 1, 
+                QTableWidgetItem(v["desc"]))
+            self.youtube_path_tbl.setItem(cur_row+k, 2, 
+                QTableWidgetItem(""))   
         
     def save_json(self):
         count = self.youtube_path_tbl.rowCount()
