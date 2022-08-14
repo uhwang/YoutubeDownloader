@@ -107,6 +107,7 @@ class Postprocess:
         self.use_time   = False
         self.t1         = "" # Start => 00:00:00:00 (HH:MM:SS:MS)
         self.t2         = "" # End   => 00:00:00:00 (HH:MM:SS:MS)
+        self.atempo     = "1"
         self.filename   = ""
         
     def get_args(self):
@@ -119,6 +120,8 @@ class Postprocess:
                             "%.2f"%t1_sec,
                             ydlconst._ydl_ffmpeg_duration,
                             "%.2f"%duration])
+        #if self.atempo != ydlconst._ydl_get_default_atempo():
+        #    ff_args.append(ydlconst._ydl_get_atempo_arg(self.atempo))
         ff_args.append(self.filename)
         return  ' '.join(ff_args)
         
@@ -127,17 +130,14 @@ class Postprocess:
                 "Bypass MKV: %s\n"\
                 "Use Time  : %s\n"\
                 "T1        : %s\n"\
-                "T2        : %s\n"%(
+                "T2        : %s\n"\
+                "Atempo    : %s\n"%(
                 self.use_ffmpeg, self.bypass_mkv, self.use_time, 
-                self.t1, self.t2)
+                self.t1, self.t2, self.atempo)
 
-class PostprocessSingleDownload(Postprocess):
-    def __init__(self):
-        super(PostprocessSingleDownload, self).__init__()
-        
-class PostprocessSingleDownloadDlg(QDialog):
+class PostprocessDlg(QDialog):
     def __init__(self, info):
-        super(PostprocessSingleDownloadDlg, self).__init__()
+        super(PostprocessDlg, self).__init__()
         self.info = info
         self.initUI(info)
         
@@ -175,6 +175,13 @@ class PostprocessSingleDownloadDlg(QDialog):
         self.time_group.setLayout(time_layout)
         self.time_group.setChecked(self.info.use_time)
         
+        #atempo_layout = QHBoxLayout()
+        #atempo_layout.addWidget(QLabel("Audio Speed"))
+        #self.atempo_cmb = QComboBox()
+        #self.atempo_cmb.addItems(ydlconst._ydl_ffmpeg_atempo_str)
+        #self.atempo_cmb.setCurrentIndex(self.atempo_cmb.findText(info.atempo))
+        #atempo_layout.addWidget(self.atempo_cmb)
+        
         output_layout = QHBoxLayout()
         output_layout.addWidget(QLabel("Output File"))
         self.output_file = QLineEdit(info.filename)
@@ -190,6 +197,7 @@ class PostprocessSingleDownloadDlg(QDialog):
         
         layout.addWidget(self.bypass_mkv_chk)
         layout.addWidget(self.time_group)
+        #layout.addRow(atempo_layout)
         layout.addRow(output_layout)
         layout.addRow(user_layout)
         self.setLayout(layout)
@@ -216,6 +224,9 @@ class PostprocessSingleDownloadDlg(QDialog):
         
     def get_bypass(self):
         return self.bypass_mkv_chk.isChecked()
+        
+    def get_atempo(self):
+        return self.atempo_cmb.currentText()
 
 # ---------------------------------------------------------------------
 # Non-modal dialogue            
@@ -478,7 +489,7 @@ class QYoutubeDownloadFormatDlg(QDialog):
 class QYoutubeDownloader(QWidget):
     def __init__(self):
         super(QYoutubeDownloader, self).__init__()
-        self.single_download_ffmpeg_config = PostprocessSingleDownload()
+        self.single_download_ffmpeg_config = Postprocess()
         ydlconf.load_config()
         self.initUI()
 
@@ -778,19 +789,22 @@ class QYoutubeDownloader(QWidget):
         self.create_vlist_tab.setLayout(layout)
         
     def copy_vlist(self):
-        self.vlist_copy, ncopy = self.create_vlist_jason()
-        if self.vlist_copy == None:
-            msg.message_box("Error: no video list exist!", msg.message_error)
+        try:
+            self.vlist_copy, ncopy = self.create_vlist_jason()
+        except Exception as e:
+            err_msg = reutil._exception_msg(e)
+            self.vlist_message.appendPlainText(err_msg)
+            msg.message_box(err_msg, msg.message_error)    
             return
         msg.message_box("%d list copied!"%ncopy, msg.message_normal)
         
     def create_vlist_jason(self):
         if not self.create_vlist:
-            return None
+            raise RuntimeError("create_vlist_jason: vlist not yet created")
             
         count = self.create_vlist._video_count
         if count == 0: 
-            return None
+            raise RuntimeError("create_video_jason: no video list exist!")
 
         if self.save_all_vlist_chk.isChecked():
             v1 = 0
@@ -799,18 +813,17 @@ class QYoutubeDownloader(QWidget):
             num_range = self.video_list_range.text()
             m = reutil._find_vlist_range.search(num_range)
             if not m:
-                err_msg = "Error: invalid number range\n%s"%num_range
+                err_msg = "create_video_jason: invalid number range\n%s"%num_range
                 self.vlist_message.appendPlainText(err_msg)
-                msg.message_box(err_msg, msg.message_error)
-                return None
+                raise RuntimeError(err_msg)
                 
             v1 = int(m[1])-1
             v2 = int(m[2])
             if v1 < 0 or v2 > count:
-                err_msg = "Error: Invalid number(%s)"%num_range
+                err_msg = "create_video_jason: Invalid number(%s)"%num_range
                 self.vlist_message.appendPlainText(err_msg)
                 msg.message_box(err_msg, msg.message_error)
-                return None
+                raise RuntimeError(err_msg)
                 
         vlist_data = OrderedDict()
         v_list = list()
@@ -1043,9 +1056,9 @@ class QYoutubeDownloader(QWidget):
         self.single_video_tab.setLayout(layout)
         
     def set_single_download_ffmpeg_config(self):
-        dlg = PostprocessSingleDownloadDlg(self.single_download_ffmpeg_config)
+        dlg = PostprocessDlg(self.single_download_ffmpeg_config)
         res = dlg.exec_()
-
+        
         if res == QDialog.Accepted:
             self.single_download_ffmpeg_config.use_ffmpeg = True
             self.single_download_ffmpeg_config.bypass_mkv = dlg.get_bypass()
@@ -1064,10 +1077,11 @@ class QYoutubeDownloader(QWidget):
 
                 self.single_download_ffmpeg_config.t1 = t1
                 self.single_download_ffmpeg_config.t2 = t2
+            self.single_download_ffmpeg_config.atempo = dlg.get_atempo()
             self.single_download_ffmpeg_config.filename = dlg.get_filename()
         else:
             self.single_download_ffmpeg_config.use_ffmpeg = False
-            
+     
     def direct_format_input(self):
         if self.direct_format_chk.isChecked():
             self.direct_format.setEnabled(True)
@@ -1272,9 +1286,10 @@ class QYoutubeDownloader(QWidget):
             res = msg.message_box("Do you want to DELETE all current URLs?", msg.message_yesno)
             if res == QMessageBox.Yes:
                 util.delete_all_item(self.youtube_path_tbl)
+                cur_row = self.youtube_path_tbl.rowCount()
         
         videos = self.vlist_copy["videos"]
-        
+
         for k, v in enumerate(videos):
             self.youtube_path_tbl.insertRow(cur_row+k)
             self.youtube_path_tbl.setItem(cur_row+k, 0, 
