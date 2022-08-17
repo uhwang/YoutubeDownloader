@@ -705,6 +705,8 @@ class QYoutubeDownloader(QWidget):
         import icon_clear_url_input
         import icon_copy_url_input
         import icon_copyvlist
+        import icon_restore
+        import icon_clear_vlist_msg
         
         self.create_vlist = None
         self.vlist_copy = None
@@ -767,6 +769,12 @@ class QYoutubeDownloader(QWidget):
         self.save_vlist_json_btn.setIconSize(QSize(24,24))
         self.save_vlist_json_btn.setToolTip("Save the list of URLs as JSON format")
         self.save_vlist_json_btn.clicked.connect(self.save_vlist_json)
+
+        self.restore_vlist_msg_btn = QPushButton('', self)
+        self.restore_vlist_msg_btn.setIcon(QIcon(QPixmap(icon_restore.table)))
+        self.restore_vlist_msg_btn.setIconSize(QSize(24,24))
+        self.restore_vlist_msg_btn.setToolTip("Restore video list")
+        self.restore_vlist_msg_btn.clicked.connect(self.restore_vlist_msg)
         
         self.clear_vlist_msg_btn = QPushButton('', self)
         self.clear_vlist_msg_btn.setIcon(QIcon(QPixmap(icon_trash_url.table)))
@@ -777,6 +785,7 @@ class QYoutubeDownloader(QWidget):
         ans_lay.addWidget(self.create_vlist_btn)
         ans_lay.addWidget(self.cancel_create_vlist_btn)
         ans_lay.addWidget(self.copy_vlist_btn)
+        ans_lay.addWidget(self.restore_vlist_msg_btn)
         ans_lay.addWidget(self.clear_vlist_msg_btn)
         ans_lay.addWidget(self.save_vlist_json_btn)
 
@@ -788,6 +797,14 @@ class QYoutubeDownloader(QWidget):
         layout.addRow(ans_lay)
         self.create_vlist_tab.setLayout(layout)
         
+    def restore_vlist_msg(self):
+        if self.create_vlist == None:
+            return
+            
+        count = len(self.create_vlist._video_list)
+        for k, u in enumerate(self.create_vlist._video_list):
+            self.vlist_message.appendPlainText("... %d of %d : %s"%(k+1, count, u))
+            
     def copy_vlist(self):
         try:
             self.vlist_copy, ncopy = self.create_vlist_jason()
@@ -795,16 +812,17 @@ class QYoutubeDownloader(QWidget):
             err_msg = reutil._exception_msg(e)
             self.vlist_message.appendPlainText(err_msg)
             msg.message_box(err_msg, msg.message_error)    
+            self.vlist_copy = None
             return
         msg.message_box("%d list copied!"%ncopy, msg.message_normal)
         
     def create_vlist_jason(self):
         if not self.create_vlist:
-            raise RuntimeError("create_vlist_jason: vlist not yet created")
+            raise RuntimeError("create_vlist_jason => vlist not yet created")
             
         count = self.create_vlist._video_count
         if count == 0: 
-            raise RuntimeError("create_video_jason: no video list exist!")
+            raise RuntimeError("create_video_jason => no video list exist!")
 
         if self.save_all_vlist_chk.isChecked():
             v1 = 0
@@ -813,14 +831,14 @@ class QYoutubeDownloader(QWidget):
             num_range = self.video_list_range.text()
             m = reutil._find_vlist_range.search(num_range)
             if not m:
-                err_msg = "create_video_jason: invalid number range\n%s"%num_range
+                err_msg = "create_video_jason => invalid number range\n%s"%num_range
                 self.vlist_message.appendPlainText(err_msg)
                 raise RuntimeError(err_msg)
                 
             v1 = int(m[1])-1
             v2 = int(m[2])
             if v1 < 0 or v2 > count:
-                err_msg = "create_video_jason: Invalid number(%s)"%num_range
+                err_msg = "create_video_jason => Invalid number(%s)"%num_range
                 self.vlist_message.appendPlainText(err_msg)
                 msg.message_box(err_msg, msg.message_error)
                 raise RuntimeError(err_msg)
@@ -831,14 +849,14 @@ class QYoutubeDownloader(QWidget):
         for k in range(v1, v2):
             url = self.create_vlist._video_list[k]
             desc = "%d of %d"%(k+1, self.create_vlist._video_count)
-            v_list.append({"desc": desc, "url": url})
+            v_list.append({"desc": desc, "url": ydlconst._ydl_url_prefix+url})
         vlist_data["videos"] = v_list
         
         return vlist_data, v2-v1
             
     def clear_vlist_msg(self):
         self.vlist_message.clear()
-        self.vlist_copy = None
+        #self.vlist_copy = None
         
     def save_all_vlist_changed(self):
         if self.save_all_vlist_chk.isChecked():
@@ -894,7 +912,7 @@ class QYoutubeDownloader(QWidget):
             msg.message_box(err_msg, msg.message_error)
             return
             
-        self.global_message.appendPlainText("URL saved at %s"%json_save_file)
+        self.global_message.appendPlainText("save_vlist_json\n... URL saved at %s"%json_save_file)
         msg.message_box("URL saved at %s"%json_save_file, msg.message_normal)
         
     def single_video_tab_UI(self):
@@ -1072,7 +1090,7 @@ class QYoutubeDownloader(QWidget):
         
                 if not match1 or not match2:
                     msg.message_box("Invalid time format(start or end)!", msg.message_warning)
-                    self.global_message.appendPlainText("=> Error\nT1 : %s\nT2 : %s\n"%(t1,t2))
+                    self.global_message.appendPlainText("Error(set_single_download_ffmpeg_config)\nT1 : %s\nT2 : %s\n"%(t1,t2))
                     return
 
                 self.single_download_ffmpeg_config.t1 = t1
@@ -1414,7 +1432,7 @@ class QYoutubeDownloader(QWidget):
         try:
             #data = str(self.process_single.readAll(), 'utf-8')
             #data = str(self.process_single.readLine(), 'cp949') # Windows 
-            data = str(self.process_single.readLine(), ydlconf.get_encoding()) # Windows 
+            data = str(self.process_single.readLine(), ydlconf.get_encoding())
         except Exception as e:
             err_msg = "Error(single_download_data_read)\n"\
                       "... process_single.readLine\n... %s"%reutil._exception_msg(e)
@@ -1529,7 +1547,7 @@ class QYoutubeDownloader(QWidget):
             self.global_message.appendPlainText(util.cmd_to_msg(sublist[0], sublist[1]))
             self.process_multiple.start(sublist[0], sublist[1])
         except Exception as e:
-            err_msg = "Error(multiple_download_finished)\n... [%d-th]: %s"%\
+            err_msg = "Error(multiple_download_finished)\n[%d-th]: %s"%\
                       (self.download_count, reutil._exception_msg(e))
             self.global_message.appendPlainText("=> %s\n"%err_msg)
             msg.message_box(err_msg, msg.message_yesno)
@@ -1649,7 +1667,7 @@ class QYoutubeDownloader(QWidget):
                     self.process_multiple.start(sublist[0], sublist[1])
                 except Exception as e:
                     err_msg = "Error(start_multiple_download)\n"\
-                              "... Sequential [%d-th]: %s"%(self.download_count, reutil._exception_msg(e))
+                              "Sequential [%d-th]: %s"%(self.download_count, reutil._exception_msg(e))
                     self.global_message.appendPlainText("=> %s\n"%err_msg)
                     msg.message_box(err_msg, msg.message_error)
                     self.delete_job_list()
