@@ -70,14 +70,16 @@ class QCreateVideoListFromURL(QObject):
             
         m = reutil._find_video_sequence.search(data)
         if m:
-            self._cur_sequence += 1
+            #self._cur_sequence += 1
+            self._cur_sequence = int(m[1])
             self._video_count = int(m[2])
            
         p = data.find("[info]")           
         if p > -1:
             s = data[p:data.find(':')]
             url = s[s.rfind(' ')+1:]
-            self._video_list.append(ydlconst._ydl_url_prefix+url)
+            #self._video_list.append(ydlconst._ydl_url_prefix+url)
+            self._video_list.append(url)
             self.status_changed.emit("... %d of %d: %s"%\
             (self._cur_sequence, self._video_count, url))
                 
