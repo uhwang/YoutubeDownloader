@@ -1363,6 +1363,7 @@ class QYoutubeDownloader(QWidget):
         
         if file: 
             path, fname = os.path.split(file)
+            os.chdir(path)
             
             try:
                 with open(file) as f:
