@@ -1095,7 +1095,7 @@ class QYoutubeDownloader(QWidget):
 
                 self.single_download_ffmpeg_config.t1 = t1
                 self.single_download_ffmpeg_config.t2 = t2
-            self.single_download_ffmpeg_config.atempo = dlg.get_atempo()
+            #self.single_download_ffmpeg_config.atempo = dlg.get_atempo()
             self.single_download_ffmpeg_config.filename = dlg.get_filename()
         else:
             self.single_download_ffmpeg_config.use_ffmpeg = False
