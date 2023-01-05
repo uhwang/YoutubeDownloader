@@ -505,9 +505,11 @@ class QYoutubeDownloader(QWidget):
         self.tabs.setObjectName('Media List')
         
         self.youtube_tab    = QWidget()
+        self.encode_tab    = QWidget()
         self.message_tab    = QWidget()
         
         self.tabs.addTab(self.youtube_tab, funs.get_youtubetab_text())
+        self.tabs.addTab(self.encode_tab, funs.get_encodetab_text())
         self.tabs.addTab(self.message_tab, funs.get_messagetab_text())
         
         self.youtube_download_tab_UI()
@@ -521,6 +523,20 @@ class QYoutubeDownloader(QWidget):
         self.setWindowIcon(QIcon(QPixmap(icon_youtube.table)))
         self.show()
     
+    def encode_tab_UI(self):
+        #import icon_arrow_down
+        #import icon_arrow_up
+        #import icon_append_url
+        #import icon_copyvlist
+        
+        layout = QFormLayout()
+        
+        self.youtube_path_tbl = QTableWidget()
+        self.youtube_path_tbl.setColumnCount(3)
+        self.youtube_path_tbl.setHorizontalHeaderItem(0, QTableWidgetItem("URL"))
+        self.youtube_path_tbl.setHorizontalHeaderItem(1, QTableWidgetItem("Description"))
+        self.youtube_path_tbl.setHorizontalHeaderItem(2, QTableWidgetItem("Status"))
+
     def timerEvent(self, e):
     
         if self.process_single:
@@ -768,7 +784,7 @@ class QYoutubeDownloader(QWidget):
         self.save_vlist_json_btn.setIcon(QIcon(QPixmap(icon_save.table)))
         self.save_vlist_json_btn.setIconSize(QSize(24,24))
         self.save_vlist_json_btn.setToolTip("Save the list of URLs as JSON format")
-        self.save_vlist_json_btn.clicked.connect(self.save_vlist_json)
+        self.save_vlist_json_btn.clicked.connect(self.save_vlist)
 
         self.restore_vlist_msg_btn = QPushButton('', self)
         self.restore_vlist_msg_btn.setIcon(QIcon(QPixmap(icon_restore.table)))
@@ -814,7 +830,7 @@ class QYoutubeDownloader(QWidget):
             msg.message_box(err_msg, msg.message_error)    
             self.vlist_copy = None
             return
-        msg.message_box("%d list copied!"%ncopy, msg.message_normal)
+        msg.message_box("%d URLs copied!"%ncopy, msg.message_normal)
         
     def create_vlist_jason(self):
         if not self.create_vlist:
@@ -879,14 +895,34 @@ class QYoutubeDownloader(QWidget):
         self.create_vlist.create_video_list_from_youtube_url()
         
     def cancel_create_vlist(self):
+        if self.create_vlist == None:
+            return
+            
         if not self.create_vlist.finished():
             res = msg.message_box("Still Running\nDo you want to quit?", msg.message_yesno)
             if res == QMessageBox.Yes:
                 self.create_vlist.cancel()
                 self.vlist_message.appendPlainText("... Job Canceled")
         
+    def save_vlist(self):
+        try:
+            self.vlist_copy, ncopy = self.save_vlist_json()
+        except Exception as e:
+            err_msg = reutil._exception_msg(e)
+            self.vlist_message.appendPlainText(err_msg)
+            msg.message_box(err_msg, msg.message_error)    
+            self.vlist_copy = None
+            return
+        msg.message_box("%d URLs copied!"%ncopy, msg.message_normal)
+               
     def save_vlist_json(self):
-
+        if not self.create_vlist:
+            raise RuntimeError("save_vlist_json => vlist not yet created")
+            
+        count = self.create_vlist._video_count
+        if count == 0: 
+            raise RuntimeError("save_vlist_json => no video list exist!")
+            
         data, _ = self.create_vlist_jason()
         if data == None:
             return
@@ -1085,8 +1121,8 @@ class QYoutubeDownloader(QWidget):
                 t1 = dlg.get_t1()
                 t2 = dlg.get_t2()
                 
-                match1 = _check_time.search(t1)
-                match2 = _check_time.search(t2)
+                match1 = reutil._check_time.search(t1)
+                match2 = reutil._check_time.search(t2)
         
                 if not match1 or not match2:
                     msg.message_box("Invalid time format(start or end)!", msg.message_warning)
@@ -1564,6 +1600,7 @@ class QYoutubeDownloader(QWidget):
     def disable_multiple_parent_buttons(self):
         self.start_multiple_download_btn.setEnabled(False)
         self.cancel_multiple_download_btn.setEnabled(False)
+        
     def enable_multiple_parent_buttons(self):
         self.start_multiple_download_btn.setEnabled(True)
         self.cancel_multiple_download_btn.setEnabled(True)
