@@ -825,7 +825,7 @@ class QYoutubeDownloader(QWidget):
         try:
             self.vlist_copy, ncopy = self.create_vlist_jason()
         except Exception as e:
-            err_msg = reutil._exception_msg(e)
+            err_msg = "copy_vlist : " + reutil._exception_msg(e)
             self.vlist_message.appendPlainText(err_msg)
             msg.message_box(err_msg, msg.message_error)    
             self.vlist_copy = None
@@ -906,15 +906,15 @@ class QYoutubeDownloader(QWidget):
         
     def save_vlist(self):
         try:
-            self.vlist_copy, ncopy = self.save_vlist_json()
+            ncopy = self.save_vlist_json()
         except Exception as e:
-            err_msg = reutil._exception_msg(e)
+            err_msg = "save_vlist => "+reutil._exception_msg(e)
             self.vlist_message.appendPlainText(err_msg)
             msg.message_box(err_msg, msg.message_error)    
-            self.vlist_copy = None
             return
-        msg.message_box("%d URLs copied!"%ncopy, msg.message_normal)
-               
+        #msg.message_box("%d URLs saved!"%ncopy, msg.message_normal)
+        self.vlist_message.appendPlainText("... %d URL(s) saved!"%ncopy)
+        
     def save_vlist_json(self):
         if not self.create_vlist:
             raise RuntimeError("save_vlist_json => vlist not yet created")
@@ -925,7 +925,7 @@ class QYoutubeDownloader(QWidget):
             
         data, _ = self.create_vlist_jason()
         if data == None:
-            return
+            return 0
             
         json_export_file = 'ydl_url_list.json'
         json_save_path = os.path.join(self.youtube_save_path.text(), json_export_file)
@@ -933,8 +933,9 @@ class QYoutubeDownloader(QWidget):
                          'JSON files (*.json);;All files (*)')
         
         json_save_file = json_save_file[0] # PyQt5
+        
         if json_save_file == '':
-            return
+            return 0
         
         if json_save_file.find(".json") == -1:
             json_save_file += ".json"
@@ -946,10 +947,12 @@ class QYoutubeDownloader(QWidget):
             err_msg = "Error(save_vlist_json)\n%s"%_exception_msg(e)
             self.global_message.appendPlainText("=> %s\n"%err_msg)
             msg.message_box(err_msg, msg.message_error)
-            return
+            return 0
             
         self.global_message.appendPlainText("save_vlist_json\n... URL saved at %s"%json_save_file)
         msg.message_box("URL saved at %s"%json_save_file, msg.message_normal)
+        
+        return len(data)
         
     def single_video_tab_UI(self):
         import icon_media_edit
