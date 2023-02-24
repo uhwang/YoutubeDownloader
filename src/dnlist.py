@@ -5,6 +5,8 @@
 
     Author: Uisang Hwang
     
+    02/23/22    Fix code for yt-dlp (youtube-dl: no more update)
+
     https://www.youtube.com/watch?v= 
     
 '''
@@ -37,7 +39,7 @@ class QCreateVideoListFromURL(QObject):
         self.proc.setProcessChannelMode(QProcess.MergedChannels)
         self.proc.finished.connect(self.read_finished)
         self.proc.readyRead.connect(self.read_data)
-        self.proc.start("youtube-dl", ["-F", self._url])
+        self.proc.start(ydlconf.get_executable_name(), ["-F", self._url])
     
     def cancel(self):
         if self.proc: 
@@ -68,7 +70,8 @@ class QCreateVideoListFromURL(QObject):
             self.status_changed.emit(err_msg)
             return
             
-        m = reutil._find_video_sequence.search(data)
+        #m = reutil._find_video_sequence.search(data)
+        m = reutil._find_playlist_sequence.search(data)
         if m:
             #self._cur_sequence += 1
             self._cur_sequence = int(m[1])

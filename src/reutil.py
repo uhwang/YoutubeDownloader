@@ -1,6 +1,8 @@
 '''
     reutil.py
 
+    02/23/22    Add code for yt-dlp (youtube-dl: no more update)
+
     Author: Uisang Hwang
     
 '''
@@ -11,12 +13,17 @@ import ydlconst
 _check_time      = re.compile ( '([0-9]{2}):([0-9]{2}):([0-9]{2}).([0-9]{2})')
 _find_time       = _check_time
 
+_find_resolution = re.compile('([0-9]+)[xX]([0-9]+)')
 _find_format     = re.compile('\w+', re.MULTILINE )
 _find_percent    = re.compile('\d+.\d+\%', re.MULTILINE )
 _find_digit      = re.compile('\d+')
+_find_digit_only = re.compile('^[0-9]+$')
 _find_bitrate    = re.compile('\d+[kK]')
 _find_error      = re.compile("%s|%s"%(ydlconst._ydl_const_warning, \
                                        ydlconst._ydl_const_error), re.MULTILINE)
+_find_valid_string = re.compile('\S+')
+_find_playlist_sequence = re.compile('([0-9]+) of ([0-9]+)')
+                                    
 _find_int        = _find_digit                                       
 
 # https://stackoverflow.com/questions/28735459/how-to-validate-youtube-url-in-client-side-in-text-box
@@ -37,6 +44,7 @@ _string_to_bool  = lambda x: True if x.lower() == "true" else False
 _yesno_to_bool   = lambda x: True if x.lower() == "yes" else False
 
 _find_vlist_range = re.compile("(\d+)-(\d+)")
-_find_video_sequence = re.compile("(\d+) of (\d+)")
+#_find_video_sequence = re.compile("(\d+) of (\d+)")
+_find_video_sequence = re.compile(" Downloading video (\d+) of (\d+)")
 
 _url_is_vimeo = lambda x: True if x.lower().find("vimeo") > -1 else False

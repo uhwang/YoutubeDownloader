@@ -3,6 +3,8 @@
     
     Youtube Downloader: Create Download List from URL w/ list type
 
+    02/23/22    Fix code for yt-dlp (youtube-dl: no more update)
+
     Author: Uisang Hwang
     
 '''
@@ -10,11 +12,15 @@ import re
 import msg
 import subprocess as sp
 from PyQt5.QtWidgets import QTableWidgetItem
+from PyQt5.QtCore import QProcess
 
 import ydlconst
 import ydlconf
 import reutil
+from functools import partial
 
+_format_data = None
+#_find_valid_string = re.compile()
 # edit : QLineEdit
 def clear_url_input(edit):
     edit.clear()
@@ -28,7 +34,7 @@ def time_to_sec(t1):
     return sec
     
 def get_youtube_formats(url, pmsg=None):
-    cmd=[ 'youtube-dl',
+    cmd=[ ydlconf.get_executable_name(), #'youtube-dl',
           ydlconst._ydl_option_socket_timeout, 
           "%s"%ydlconf.get_fetch_timeout_duration(),
           '-F', url]
@@ -59,18 +65,36 @@ def get_youtube_formats(url, pmsg=None):
         msg.message_box("Error: can't fetch formats\nCheck the message!", msg.message_error)
         return None
 
-    # output is a list of strings
-    output = output.split('\n')
-    
     # count commnet lines
     skip_comment = 0
+    # output is a list of strings
+    output = output.split('\n')
     for o in output:
         o.strip()
-        if reutil._find_digit.search(o[0:o.find(' ')]):
+        #if reutil._find_digit.search(o[0:o.find(' ')]):
+        if reutil._find_digit_only.search(o[0:o.find(' ')]):
             break
         skip_comment += 1
      
-    formats = output[skip_comment:]
+    #formats = output[skip_comment:]
+    #formats = []
+    #for i, o in enumerate(output[skip_comment:]):
+    #    if not reutil._find_valid_string.findall(o):
+    #        formats.pop(i)
+    #        continue
+    #    formats.append(o.replace('|',''))
+    formats = [o.replace('|','') for o in output[skip_comment:]]
+    if not reutil._find_valid_string.findall(formats[-1]):
+        del formats[-1]
+    
+    for i, f in enumerate(formats):
+        if f.find("video only") > -1 or f.find("audio only") > -1:
+            continue
+        else:
+            if reutil._find_resolution.search(f): 
+                ff = formats.pop(i)
+                formats.append(ff)
+    
     del proc
     
     return formats
@@ -78,17 +102,45 @@ def get_youtube_formats(url, pmsg=None):
 def get_youtube_format_from_formats(format):
 
     e = reutil._find_format.findall(format)
-    filesize = reutil._find_file_size(format)
-    bitrate = reutil._find_bitrate.search(format)
+    #filesize = reutil._find_file_size(format)
+    #bitrate = reutil._find_bitrate.search(format)
+    #format_elem = re.findall(r'\S+', format)
+    format_elem = reutil._find_valid_string.findall(format)
 
     if len(e) < 1: return None
     
+    # code  ext  res                 size                      bit   type
+    # ID    EXT  RESOLUTION  FPS  CH FILESIZE TBR PROTO VCODEC VBR ACODEC ABR ASR MORE INFO
     if format.find('audio') > -1:
-        fm = [ e[0], e[1], e[2], bitrate[0], filesize[0], 'audio only']
+        filesize = format_elem[5]
+        #fm = [ e[0], e[1], e[2], bitrate[0], filesize[0], 'audio only']
+        fm = [ 
+                format_elem[0], 
+                format_elem[1], 
+                'N/A', 
+                format_elem[11], 
+                filesize, 
+                'audio only']
     else:
-        fm = [ e[0], e[1], e[2], bitrate[0], 
-               filesize[0] if filesize else "best" if format.find("best")>-1 else "N/A",
-               'video only' if format.find('video only')>-1 else "video"]
+        filesize = format_elem[4]
+        #fm = [ e[0], e[1], e[2], bitrate[0], 
+        #       filesize[0] if filesize else "best" if format.find("best")>-1 else "N/A",
+        #       'video only' if format.find('video only')>-1 else "video"]
+        ch = format_elem[4]
+        if ch in '12':
+            filesize = format_elem[5] 
+            vbr = format_elem[9] 
+        else:
+            filesize = format_elem[4]
+            vbr = format_elem[8] 
+        fm = [
+                format_elem[0], 
+                format_elem[1], 
+                format_elem[2], 
+                filesize,
+                vbr,
+                'video only' if format.find('video only')>-1 else "video"
+                ]
     return fm
     
 def fetch_youtube_format_from_url(url, tbl, pmsg=None):

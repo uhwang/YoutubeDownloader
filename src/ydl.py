@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 '''
     Youtube DownLoader w/ PyQt4 & PyQt5
@@ -17,6 +18,7 @@
     07/10/22    Exception in case of no internet
     07/11/22    Remove unused code
     07/18/22    Create video urls from youtube url w/ list 
+    02/23/22    Fix code for yt-dlp (youtube-dl: no more update)
                 
     Note:       Change source code depending on PyQt Version 4/5
                 
@@ -1640,7 +1642,7 @@ class QYoutubeDownloader(QWidget):
             
         tab_text = self.youtube_tabs.tabText(self.youtube_tabs.currentIndex())
         
-        arg_list = ['youtube-dl']
+        arg_list = [ydlconf.get_executable_name()]
         self.multiple_download_step = 0
             
         if tab_text == funs.get_multiple_tab_text():    
@@ -1758,7 +1760,7 @@ class QYoutubeDownloader(QWidget):
         
         tab_text = self.youtube_tabs.tabText(self.youtube_tabs.currentIndex())
         
-        arg_list = ['youtube-dl']
+        arg_list = [ydlconf.get_executable_name()]
         self.single_download_step = 0
             
         if tab_text == funs.get_single_tab_text():
