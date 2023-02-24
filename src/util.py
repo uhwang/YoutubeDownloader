@@ -77,13 +77,10 @@ def get_youtube_formats(url, pmsg=None):
         skip_comment += 1
      
     #formats = output[skip_comment:]
-    #formats = []
-    #for i, o in enumerate(output[skip_comment:]):
-    #    if not reutil._find_valid_string.findall(o):
-    #        formats.pop(i)
-    #        continue
-    #    formats.append(o.replace('|',''))
-    formats = [o.replace('|','') for o in output[skip_comment:]]
+
+    #formats = [o.replace('|','') for o in output[skip_comment:]]
+    formats = [re.sub('[|~]','', o) for o in output[skip_comment:]]
+    
     if not reutil._find_valid_string.findall(formats[-1]):
         del formats[-1]
     
@@ -122,12 +119,13 @@ def get_youtube_format_from_formats(format):
                 filesize, 
                 'audio only']
     else:
-        filesize = format_elem[4]
         #fm = [ e[0], e[1], e[2], bitrate[0], 
         #       filesize[0] if filesize else "best" if format.find("best")>-1 else "N/A",
         #       'video only' if format.find('video only')>-1 else "video"]
-        ch = format_elem[4]
-        if ch in '12':
+        
+        # check 4th elem is channel 1 or 2
+        # 17  3gp   176x144     12  1 192.62KiB
+        if format_elem[4].isdigit():
             filesize = format_elem[5] 
             vbr = format_elem[9] 
         else:
@@ -137,8 +135,8 @@ def get_youtube_format_from_formats(format):
                 format_elem[0], 
                 format_elem[1], 
                 format_elem[2], 
-                filesize,
                 vbr,
+                filesize,
                 'video only' if format.find('video only')>-1 else "video"
                 ]
     return fm
