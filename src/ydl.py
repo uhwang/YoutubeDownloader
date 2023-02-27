@@ -18,7 +18,8 @@
     07/10/22    Exception in case of no internet
     07/11/22    Remove unused code
     07/18/22    Create video urls from youtube url w/ list 
-    02/23/22    Fix code for yt-dlp (youtube-dl: no more update)
+    02/23/23    Fix code for yt-dlp (youtube-dl: no more update)
+    02/23/23    Adjust code for skip invalid video url
                 
     Note:       Change source code depending on PyQt Version 4/5
                 
@@ -839,6 +840,7 @@ class QYoutubeDownloader(QWidget):
             raise RuntimeError("create_vlist_jason => vlist not yet created")
             
         count = self.create_vlist._video_count
+        #count = len(self.create_vlist._video_list)
         if count == 0: 
             raise RuntimeError("create_video_jason => no video list exist!")
 
@@ -863,10 +865,13 @@ class QYoutubeDownloader(QWidget):
                 
         vlist_data = OrderedDict()
         v_list = list()
-        
+        # k, v1, v2 are zero base
         for k in range(v1, v2):
+            kk = k+1
+            if kk in self.create_vlist._invalid_video_sequence:
+                continue
             url = self.create_vlist._video_list[k]
-            desc = "%d of %d"%(k+1, self.create_vlist._video_count)
+            desc = "%d of %d"%(kk, self.create_vlist._video_count)
             v_list.append({"desc": desc, "url": ydlconst._ydl_url_prefix+url})
         vlist_data["videos"] = v_list
         
