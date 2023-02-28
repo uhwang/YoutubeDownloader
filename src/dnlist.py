@@ -34,7 +34,6 @@ class QCreateVideoListFromURL(QObject):
         self._video_count = 0
         self._url = url
         self._msg = pmsg
-        self._invalid_video = []
         self._invalid_video_url = []
         self._invalid_video_sequence = []
         
@@ -54,6 +53,9 @@ class QCreateVideoListFromURL(QObject):
     def read_finished(self):
         if self._cur_sequence == self._video_count:
             final_msg = "... URL List Finished!\n"
+            if self._video_count == 0:
+                self._msg.appendPlainText("==> WARNING : check URL")
+                
             if self._invalid_video_url:
                 self._invalid_video_sequence = [
                       i+1 for i, v in enumerate(self._video_list)
@@ -63,6 +65,7 @@ class QCreateVideoListFromURL(QObject):
                              "==> %s"\
                              %(len(self._invalid_video_url),
                              ' '.join(map(str,self._invalid_video_sequence)))
+            self.status_changed.emit(ydlconst._ydl_const_finished)
             self._msg.appendPlainText(final_msg)
     
     def finished(self):
