@@ -493,10 +493,10 @@ class QYoutubeDownloader(QWidget):
     def __init__(self):
         super(QYoutubeDownloader, self).__init__()
         self.single_download_ffmpeg_config = Postprocess()
-        ydlconf.load_config()
         self.initUI()
 
     def initUI(self):
+        self.ydl_exec_path = os.getcwd()
         self.form_layout  = QFormLayout()
         tab_layout = QVBoxLayout()
         self.tabs = QTabWidget()
@@ -510,14 +510,16 @@ class QYoutubeDownloader(QWidget):
         self.youtube_tab    = QWidget()
         self.encode_tab    = QWidget()
         self.message_tab    = QWidget()
+
+        self.message_tab_UI()
+        ydlconf.load_config(self.global_message)
+        self.global_message.appendPlainText(ydlconf.dump_config())
         
         self.tabs.addTab(self.youtube_tab, funs.get_youtubetab_text())
         self.tabs.addTab(self.encode_tab, funs.get_encodetab_text())
         self.tabs.addTab(self.message_tab, funs.get_messagetab_text())
         
         self.youtube_download_tab_UI()
-        self.message_tab_UI()
-        self.global_message.appendPlainText(ydlconf.dump_config())
         
         tab_layout.addWidget(self.tabs)
         self.form_layout.addRow(tab_layout)
@@ -527,11 +529,6 @@ class QYoutubeDownloader(QWidget):
         self.show()
     
     def encode_tab_UI(self):
-        #import icon_arrow_down
-        #import icon_arrow_up
-        #import icon_append_url
-        #import icon_copyvlist
-        
         layout = QFormLayout()
         
         self.youtube_path_tbl = QTableWidget()
@@ -540,6 +537,9 @@ class QYoutubeDownloader(QWidget):
         self.youtube_path_tbl.setHorizontalHeaderItem(1, QTableWidgetItem("Description"))
         self.youtube_path_tbl.setHorizontalHeaderItem(2, QTableWidgetItem("Status"))
 
+    def closeEvent(self, event):
+        ydlconf.save_config(self.ydl_exec_path)
+        
     def timerEvent(self, e):
     
         if self.process_single:
@@ -569,13 +569,14 @@ class QYoutubeDownloader(QWidget):
         layout = QFormLayout()
         
         grid = QGridLayout()
-        grid.addWidget(QLabel("Folder"), 0,0)
+        grid.addWidget(QLabel("Download"), 0,0)
         self.youtube_save_path = QLineEdit()
-        self.youtube_save_path.setText(os.getcwd())  
+        self.youtube_save_path.setText(ydlconf.get_download_path())  
         
         self.youtube_save_path_btn = QPushButton()
         self.youtube_save_path_btn.setIcon(QIcon(QPixmap(icon_folder_open.table)))
         self.youtube_save_path_btn.setIconSize(QSize(16,16))
+        self.youtube_save_path_btn.setToolTip("Change download folder")
         self.youtube_save_path_btn.clicked.connect(self.get_new_youtube_download_path)
         
         grid.addWidget(self.youtube_save_path, 0, 1)
@@ -614,6 +615,20 @@ class QYoutubeDownloader(QWidget):
         layout.addRow(self.youtube_tabs)
         self.youtube_tab.setLayout(layout)
         
+    def remove_config_tree(self, config_tree):
+        pass
+        
+    def set_config_tree(self, config_tree):
+        for key1, item1 in ydlconf._config.items():
+            tree_item = QTreeWidgetItem(self.config_tree)
+            tree_item.setText(0,key1)
+            for key2, val in item1.items():
+                sub_item = QTreeWidgetItem()
+                sub_item.setText(0,key2)
+                sub_item.setText(1,val)
+                sub_item.setFlags(sub_item.flags()|Qt.ItemIsEditable)
+                tree_item.addChild(sub_item)
+
     def setting_tab_UI(self):
         import icon_apply
         import icon_undo
@@ -634,15 +649,7 @@ class QYoutubeDownloader(QWidget):
         self.config_tree.setHeaderLabels(["Name", "Value"])
         self.config_tree.setStyleSheet(style)
         
-        for key1, item1 in ydlconf._config.items():
-            tree_item = QTreeWidgetItem(self.config_tree)
-            tree_item.setText(0,key1)
-            for key2, val in item1.items():
-                sub_item = QTreeWidgetItem()
-                sub_item.setText(0,key2)
-                sub_item.setText(1,val)
-                sub_item.setFlags(sub_item.flags()|Qt.ItemIsEditable)
-                tree_item.addChild(sub_item)
+        self.set_config_tree(self.config_tree)
         
         resp_lay = QHBoxLayout()
 
@@ -652,11 +659,11 @@ class QYoutubeDownloader(QWidget):
         self.apply_config_btn.setToolTip("Apply current configure")
         self.apply_config_btn.clicked.connect(self.apply_config)
 
-        self.undo_config_btn = QPushButton()
-        self.undo_config_btn.setIcon(QIcon(QPixmap(icon_undo.table)))
-        self.undo_config_btn.setIconSize(QSize(24,24))
-        self.undo_config_btn.setToolTip("Set default value")
-        self.undo_config_btn.clicked.connect(self.undo_config)
+        self.reset_config_btn = QPushButton()
+        self.reset_config_btn.setIcon(QIcon(QPixmap(icon_undo.table)))
+        self.reset_config_btn.setIconSize(QSize(24,24))
+        self.reset_config_btn.setToolTip("Set default value")
+        self.reset_config_btn.clicked.connect(self.reset_config)
         
         self.save_config_btn = QPushButton()
         self.save_config_btn.setIcon(QIcon(QPixmap(icon_save.table)))
@@ -671,7 +678,7 @@ class QYoutubeDownloader(QWidget):
         self.dump_config_btn.clicked.connect(self.dump_config)
         
         resp_lay.addWidget(self.apply_config_btn)
-        resp_lay.addWidget(self.undo_config_btn)
+        resp_lay.addWidget(self.reset_config_btn)
         resp_lay.addWidget(self.save_config_btn)
         resp_lay.addWidget(self.dump_config_btn)
         
@@ -691,7 +698,7 @@ class QYoutubeDownloader(QWidget):
                 value = item.child(j).text(1)
                 ydlconf._config[name][field] = value
         
-    def undo_config(self):
+    def reset_config(self):
         ydlconf.set_default_config()
         for i in range(self.config_tree.topLevelItemCount()):
             item = self.config_tree.topLevelItem(i)
@@ -705,7 +712,7 @@ class QYoutubeDownloader(QWidget):
         self.global_message.appendPlainText(ydlconf.dump_config())
         
     def save_config(self):
-        ydlconf.save_config()
+        ydlconf.save_config(self.ydl_exec_path)
         
     def get_new_youtube_download_path(self):
         startingDir = os.getcwd() 
@@ -713,7 +720,12 @@ class QYoutubeDownloader(QWidget):
         QFileDialog.ShowDirsOnly)
         if not path: return
         self.youtube_save_path.setText(path)
-        #os.chdir(path)    
+        os.chdir(path)
+        ydlconf.set_download_path(path)
+        self.config_tree.clear()
+        self.set_config_tree(self.config_tree)
+        self.dump_config()
+        ydlconf.save_config(self.ydl_exec_path)
         
     def youtube_video_tab_changed(self):
         pass
@@ -770,7 +782,7 @@ class QYoutubeDownloader(QWidget):
         self.create_vlist_btn = QPushButton()
         self.create_vlist_btn.setIcon(QIcon(QPixmap(icon_startvlist.table)))
         self.create_vlist_btn.setIconSize(QSize(24,24))
-        self.create_vlist_btn.clicked.connect(self.create_video_list)
+        self.create_vlist_btn.clicked.connect(self.start_create_video_list)
         
         self.cancel_create_vlist_btn = QPushButton()
         self.cancel_create_vlist_btn.setIcon(QIcon(QPixmap(icon_stopvlist.table)))
@@ -875,8 +887,8 @@ class QYoutubeDownloader(QWidget):
             v_list.append({"desc": desc, "url": ydlconst._ydl_url_prefix+url})
         vlist_data["videos"] = v_list
         
-        return vlist_data, v2-v1
-            
+        return vlist_data, v2-v1-len(self.create_vlist._invalid_video_sequence)
+        
     def clear_vlist_msg(self):
         self.vlist_message.clear()
         #self.vlist_copy = None
@@ -889,8 +901,10 @@ class QYoutubeDownloader(QWidget):
             
     def get_create_vlist_status(self, status):
         self.vlist_message.appendPlainText(status)
+        if status == ydlconst._ydl_const_finished:
+            self.create_vlist_btn.setEnabled(True)
             
-    def create_video_list(self):
+    def start_create_video_list(self):
         url = self.video_url.text()
         
         if reutil._url_is_vimeo(url):
@@ -900,6 +914,7 @@ class QYoutubeDownloader(QWidget):
         self.create_vlist = dnlist.QCreateVideoListFromURL(url, self.vlist_message)
         self.create_vlist.status_changed.connect(self.get_create_vlist_status)
         self.create_vlist.create_video_list_from_youtube_url()
+        self.create_vlist_btn.setEnabled(False)
         
     def cancel_create_vlist(self):
         if self.create_vlist == None:
@@ -910,6 +925,7 @@ class QYoutubeDownloader(QWidget):
             if res == QMessageBox.Yes:
                 self.create_vlist.cancel()
                 self.vlist_message.appendPlainText("... Job Canceled")
+                self.create_vlist_btn.setEnabled(True)
         
     def save_vlist(self):
         try:
@@ -930,7 +946,7 @@ class QYoutubeDownloader(QWidget):
         if count == 0: 
             raise RuntimeError("save_vlist_json => no video list exist!")
             
-        data, _ = self.create_vlist_jason()
+        data, nurl = self.create_vlist_jason()
         if data == None:
             return 0
             
@@ -959,7 +975,7 @@ class QYoutubeDownloader(QWidget):
         self.global_message.appendPlainText("save_vlist_json\n... URL saved at %s"%json_save_file)
         msg.message_box("URL saved at %s"%json_save_file, msg.message_normal)
         
-        return len(data)
+        return nurl
         
     def single_video_tab_UI(self):
         import icon_media_edit
