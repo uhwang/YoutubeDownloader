@@ -8,6 +8,7 @@
     Author: Uisang Hwang
     
 '''
+import os
 import json
 import util
 import reutil
@@ -16,11 +17,12 @@ import ydlconst
 
 _ydl_config_file = "ydl.conf"
 
-_config = None
-_config_dict_keys = ["ydl_exec", "timer", "concurrent"]
+_config = {}
+_config_dict_keys = ["ydl_exec", "timer", "concurrent", "download"]
 def _get_config_key_exec(): return _config_dict_keys[0]
 def _get_config_key_timer(): return _config_dict_keys[1]
 def _get_config_key_concurrent(): return _config_dict_keys[2]
+def _get_config_key_download(): return _config_dict_keys[3]
 
 def dump_config():
     return "Output : %s\n"\
@@ -36,6 +38,7 @@ def dump_config():
            "Limit Max Process   : %s\n"\
            "Max Process         : %s\n"\
            "Tracker Height      : %s\n"\
+           "Download Path       : %s\n"\
            %(
                 _config[_get_config_key_exec()]["output"],
                 _config[_get_config_key_exec()]["executable"],
@@ -49,7 +52,8 @@ def dump_config():
                 _config[_get_config_key_timer()]["interval_concurrent"],
                 _config[_get_config_key_concurrent()]["limit_max_process"],
                 _config[_get_config_key_concurrent()]["max_process"],
-                _config[_get_config_key_concurrent()]["tracker_height"]
+                _config[_get_config_key_concurrent()]["tracker_height"],
+                _config[_get_config_key_download()]["path"]
             )
     
 def get_filename_pattern():
@@ -91,11 +95,26 @@ def get_max_process():
 def get_tacker_height(): 
     return int(_config[_get_config_key_concurrent()]["tracker_height"])
     
-def set_default_config():
+def get_download_path(): 
+    return _config[_get_config_key_download()]["path"]
+
+def set_download_path(path): 
+    _config[_get_config_key_download()]["path"] = path
+    
+def check_download_folder(ydl_msg):
+    path = _config[_get_config_key_download()]["path"]
+    
+    if path == "download":
+        download_path = os.path.join(os.getcwd(), path)
+        if os.path.exists(download_path) == False:
+            ydl_msg.appendPlainText("... Creating download folder\n%s"%download_path)
+            os.makedirs(download_path)
+        _config[_get_config_key_download()]["path"] = download_path
+        
+def set_default_config(ydl_msg):
     global _config
     
     _config[_get_config_key_exec()] = {
-    #_config["ydl_exec"] = {
             "output"             : "%(title)s [%(id)s].%(ext)s",
             "executable"         : ydlconst._ydl_executable_name,
             "fetch_timeout"      : "30 sec",
@@ -116,21 +135,51 @@ def set_default_config():
             "max_process"       : "10",
             "tracker_height"    : "300"
         }
+
+    _config[_get_config_key_download()] = {
+            "path" : "download"
+        }
+    check_download_folder(ydl_msg)
     
-def save_config():
+def save_config(ydl_exec_path):
+    global _config
+    
     try:
-        with open(_ydl_config_file, 'w') as f:
-            json.dump(_config, f, ensure_ascii=False, indent=4)
+        exe_path = os.path.join(ydl_exec_path,_ydl_config_file)
+        with open(exe_path, 'w') as fp:
+            json.dump(_config, fp, ensure_ascii=False, indent=4)
     except Exception as e:    
         msg.message_box(str(e), msg.message_error)
         
-def load_config():
+def load_config(ydl_msg):
     global _config
  
+    ydl_msg.appendPlainText("... Loading config")
     try: 
         with open(_ydl_config_file, "rt") as fp:
             _config = json.load(fp)
     except Exception as e:
         msg.message_box(str(e), msg.message_error)
-        set_default_config()
-     
+        ydl_msg.appendPlainText("... No config found: load default value")
+        set_default_config(ydl_msg)
+        
+    check_download_folder(ydl_msg)
+
+#class message:
+#    def __init__(self):
+#        pass
+#        
+#    def appendPlainText(s):
+#        print(s)
+#
+#msg = message()
+#        
+#def main():
+#    set_default_config(msg)
+#    set_download_path("dddd333dwwwdd.")
+#    #print(json.dumps(_config, indent=4))
+#    save_config()
+#    
+#if __name__ == '__main__':
+#    main()    
+#
