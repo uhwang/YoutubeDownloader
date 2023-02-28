@@ -164,22 +164,3 @@ def load_config(ydl_msg):
         set_default_config(ydl_msg)
         
     check_download_folder(ydl_msg)
-
-#class message:
-#    def __init__(self):
-#        pass
-#        
-#    def appendPlainText(s):
-#        print(s)
-#
-#msg = message()
-#        
-#def main():
-#    set_default_config(msg)
-#    set_download_path("dddd333dwwwdd.")
-#    #print(json.dumps(_config, indent=4))
-#    save_config()
-#    
-#if __name__ == '__main__':
-#    main()    
-#
