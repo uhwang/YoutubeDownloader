@@ -65,6 +65,7 @@ class QCreateVideoListFromURL(QObject):
                              "==> %s"\
                              %(len(self._invalid_video_url),
                              ' '.join(map(str,self._invalid_video_sequence)))
+            # this signal is for enable start button.
             self.status_changed.emit(ydlconst._ydl_const_finished)
             self._msg.appendPlainText(final_msg)
     
@@ -118,4 +119,3 @@ class QCreateVideoListFromURL(QObject):
             self.status_changed.emit("... %d of %d: %s"%\
             (self._cur_sequence, self._video_count, url))
         '''
-        

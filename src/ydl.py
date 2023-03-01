@@ -754,15 +754,15 @@ class QYoutubeDownloader(QWidget):
         self.clear_url_btn.setToolTip("Clear url input")
         self.clear_url_btn.clicked.connect(partial(util.clear_url_input, self.video_url))
         
-        self.copy_url_btn = QPushButton('', self)
-        self.copy_url_btn.setIcon(QIcon(QPixmap(icon_copy_url_input.table)))
-        self.copy_url_btn.setIconSize(QSize(16,16))
-        self.copy_url_btn.setToolTip("Copy a url from clipboard")
-        self.copy_url_btn.clicked.connect(partial(util.copy_url_input, self.video_url, _clipboard))
+        self.paste_url_btn = QPushButton('', self)
+        self.paste_url_btn.setIcon(QIcon(QPixmap(icon_copy_url_input.table)))
+        self.paste_url_btn.setIconSize(QSize(16,16))
+        self.paste_url_btn.setToolTip("Copy a url from clipboard")
+        self.paste_url_btn.clicked.connect(partial(util.get_url_from_clipboard, self.video_url, _clipboard))
         
         grid.addWidget(self.video_url, 1, 1)
         grid.addWidget(self.clear_url_btn, 1, 2)
-        grid.addWidget(self.copy_url_btn, 1, 3)
+        grid.addWidget(self.paste_url_btn, 1, 3)
                 
         self.vlist_message = QPlainTextEdit()
 
@@ -837,8 +837,14 @@ class QYoutubeDownloader(QWidget):
             self.vlist_message.appendPlainText("... %d of %d : %s"%(k+1, count, u))
             
     def copy_vlist(self):
+        global _clipboard
+        
         try:
             self.vlist_copy, ncopy = self.create_vlist_jason()
+            # copy url list to clipboard
+            videos = self.vlist_copy["videos"]
+            _clipboard.clear()
+            _clipboard.setText('\n'.join([v["url"] for v in videos]))
         except Exception as e:
             err_msg = "copy_vlist : " + reutil._exception_msg(e)
             self.vlist_message.appendPlainText(err_msg)
@@ -891,7 +897,6 @@ class QYoutubeDownloader(QWidget):
         
     def clear_vlist_msg(self):
         self.vlist_message.clear()
-        #self.vlist_copy = None
         
     def save_all_vlist_changed(self):
         if self.save_all_vlist_chk.isChecked():
@@ -900,7 +905,7 @@ class QYoutubeDownloader(QWidget):
             self.video_list_range.setEnabled(True)
             
     def get_create_vlist_status(self, status):
-        self.vlist_message.appendPlainText(status)
+        #self.vlist_message.appendPlainText(status)
         if status == ydlconst._ydl_const_finished:
             self.create_vlist_btn.setEnabled(True)
             
@@ -994,15 +999,15 @@ class QYoutubeDownloader(QWidget):
         self.clear_url_btn.setToolTip("Clear url input")
         self.clear_url_btn.clicked.connect(partial(util.clear_url_input, self.youtube_url))
         
-        self.copy_url_btn = QPushButton('', self)
-        self.copy_url_btn.setIcon(QIcon(QPixmap(icon_copy_url_input.table)))
-        self.copy_url_btn.setIconSize(QSize(16,16))
-        self.copy_url_btn.setToolTip("Copy a url from clipboard")
-        self.copy_url_btn.clicked.connect(partial(util.copy_url_input, self.youtube_url, _clipboard))
+        self.paste_url_btn = QPushButton('', self)
+        self.paste_url_btn.setIcon(QIcon(QPixmap(icon_copy_url_input.table)))
+        self.paste_url_btn.setIconSize(QSize(16,16))
+        self.paste_url_btn.setToolTip("Paste a url from clipboard")
+        self.paste_url_btn.clicked.connect(partial(util.get_url_from_clipboard, self.youtube_url, _clipboard))
         
         grid.addWidget(self.youtube_url, 1, 1)
         grid.addWidget(self.clear_url_btn, 1, 2)
-        grid.addWidget(self.copy_url_btn, 1, 3)
+        grid.addWidget(self.paste_url_btn, 1, 3)
         
         self.youtube_format_tbl = QTableWidget()
         self.youtube_format_tbl.verticalHeader().hide()

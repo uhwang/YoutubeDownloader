@@ -25,7 +25,7 @@ _format_data = None
 def clear_url_input(edit):
     edit.clear()
 
-def copy_url_input(edit, clipboard):
+def get_url_from_clipboard(edit, clipboard):
     edit.setText(clipboard.text())
     
 def time_to_sec(t1):

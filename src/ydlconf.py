@@ -104,11 +104,11 @@ def set_download_path(path):
 def check_download_folder(ydl_msg):
     path = _config[_get_config_key_download()]["path"]
     
-    if path == "download":
-        download_path = os.path.join(os.getcwd(), path)
-        if os.path.exists(download_path) == False:
-            ydl_msg.appendPlainText("... Creating download folder\n%s"%download_path)
-            os.makedirs(download_path)
+    if os.path.exists(path) == False:
+        download_path = os.path.join(os.getcwd(), "download")
+        ydl_msg.appendPlainText("... Error: current path not exist\n"\
+                                "... Creating download folder\n==>%s\n"%download_path)
+        os.makedirs(download_path)
         _config[_get_config_key_download()]["path"] = download_path
         
 def set_default_config(ydl_msg):
