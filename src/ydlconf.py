@@ -14,6 +14,7 @@ import util
 import reutil
 import msg
 import ydlconst
+from pathlib import Path, PurePath
 
 _ydl_config_file = "ydl.conf"
 
@@ -104,11 +105,16 @@ def set_download_path(path):
 def check_download_folder(ydl_msg):
     path = _config[_get_config_key_download()]["path"]
     
-    if os.path.exists(path) == False:
-        download_path = os.path.join(os.getcwd(), "download")
+    p = Path(path)
+    if p.exists() == False:
+        download_path = str(PurePath(Path.cwd()).joinpath("download"))
         ydl_msg.appendPlainText("... Error: current path not exist\n"\
                                 "... Creating download folder\n==>%s\n"%download_path)
-        os.makedirs(download_path)
+        try:
+            Path.mkdir(download_path)
+        except Exception as e:
+            ydl_msg.appendPlainText("... Error: can't create folder\nSet download folder manually(click button)")
+       
         _config[_get_config_key_download()]["path"] = download_path
         
 def set_default_config(ydl_msg):
