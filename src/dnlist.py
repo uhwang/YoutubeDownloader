@@ -22,6 +22,12 @@ import ydlconst
 import ydlconf
 import msg
 
+_source_type_youtube = 0x01
+_source_type_soundcloud = 0x02
+_url_hint_youtube =  "?v="
+_url_hint_soundcloud  = "URL"
+
+
 class QCreateVideoListFromURL(QObject):
 
     status_changed = pyqtSignal(str)
@@ -36,6 +42,9 @@ class QCreateVideoListFromURL(QObject):
         self._msg = pmsg
         self._invalid_video_url = []
         self._invalid_video_sequence = []
+        self._source_type = True
+        self._url_hint = ""
+        self._url_pos = 0
         
     def create_video_list_from_youtube_url(self):
         self.proc = QProcess()
@@ -44,7 +53,17 @@ class QCreateVideoListFromURL(QObject):
         self.proc.setProcessChannelMode(QProcess.SeparateChannels)
         self.proc.finished.connect(self.read_finished)
         self.proc.readyRead.connect(self.read_data)
-        self.proc.start(ydlconf.get_executable_name(), ["-F", self._url])
+        if self._url.find("soundcloud") >= 0:
+            self.proc.start(ydlconf.get_executable_name(), 
+                    ["--no-write-info-json", "--skip-download", self._url])
+            self._source_type = _source_type_soundcloud
+            self._url_hint = _url_hint_soundcloud
+            self._url_pos = 5
+        else:
+            self.proc.start(ydlconf.get_executable_name(), ["-F", self._url])
+            self._source_type = _source_type_youtube
+            self._url_hint = _url_hint_youtube
+            self._url_pos = 3
     
     def cancel(self):
         if self.proc: 
@@ -102,9 +121,11 @@ class QCreateVideoListFromURL(QObject):
             
         u1 = url_data.split('\n')
         for u2 in u1:
-            p = u2.find("?v=")
+            #p = u2.find("?v=")
+            p = u2.find(self._url_hint)
             if p > -1: 
-                url = u2[p+3:].strip()
+                #url = u2[p+3:].strip()
+                url = u2[p+self._url_pos:].strip()
                 self._video_list.append(url)
                 self._msg.appendPlainText("... %d of %d: %s"%(self._cur_sequence, self._video_count, url))
             #self.status_changed.emit("... %d of %d: %s"%\

@@ -81,6 +81,7 @@ from PyQt5.QtWidgets import ( QApplication,
 
 import icon_request_format
 import icon_download
+import icon_download_folder
 import icon_cancel
 import icon_edit
 import icon_add_row
@@ -507,9 +508,9 @@ class QYoutubeDownloader(QWidget):
         self.tabs.setTabPosition(QTabWidget.West)
         self.tabs.setObjectName('Media List')
         
-        self.youtube_tab    = QWidget()
-        self.encode_tab    = QWidget()
-        self.message_tab    = QWidget()
+        self.youtube_tab = QWidget()
+        self.encode_tab  = QWidget()
+        self.message_tab = QWidget()
 
         self.message_tab_UI()
         ydlconf.load_config(self.global_message)
@@ -574,7 +575,8 @@ class QYoutubeDownloader(QWidget):
         self.youtube_save_path.setText(ydlconf.get_download_path())  
         
         self.youtube_save_path_btn = QPushButton()
-        self.youtube_save_path_btn.setIcon(QIcon(QPixmap(icon_folder_open.table)))
+        #self.youtube_save_path_btn.setIcon(QIcon(QPixmap(icon_folder_open.table)))
+        self.youtube_save_path_btn.setIcon(QIcon(QPixmap(icon_download_folder.table)))
         self.youtube_save_path_btn.setIconSize(QSize(16,16))
         self.youtube_save_path_btn.setToolTip("Change download folder")
         self.youtube_save_path_btn.clicked.connect(self.get_new_youtube_download_path)
@@ -890,7 +892,10 @@ class QYoutubeDownloader(QWidget):
                 continue
             url = self.create_vlist._video_list[k]
             desc = "%d of %d"%(kk, self.create_vlist._video_count)
-            v_list.append({"desc": desc, "url": ydlconst._ydl_url_prefix+url})
+            v_list.append({"desc": desc, "url": 
+                            ydlconst._ydl_url_prefix+url 
+                            if url.find("soundcloud") == -1 
+                            else url})
         vlist_data["videos"] = v_list
         
         return vlist_data, v2-v1-len(self.create_vlist._invalid_video_sequence)
@@ -1501,6 +1506,7 @@ class QYoutubeDownloader(QWidget):
             #data = str(self.process_single.readAll(), 'utf-8')
             #data = str(self.process_single.readLine(), 'cp949') # Windows 
             data = str(self.process_single.readLine(), ydlconf.get_encoding())
+            print(data)
         except Exception as e:
             err_msg = "Error(single_download_data_read)\n"\
                       "... process_single.readLine\n... %s"%reutil._exception_msg(e)
@@ -1531,6 +1537,7 @@ class QYoutubeDownloader(QWidget):
                         
         match = reutil._find_percent.search(data)
         if match:
+            print(match.group(0))
             self.single_download_step = int(float(match.group(0)[:-1]))
 
     def single_download_finished(self):

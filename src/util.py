@@ -72,15 +72,16 @@ def get_youtube_formats(url, pmsg=None):
     for o in output:
         o.strip()
         #if reutil._find_digit.search(o[0:o.find(' ')]):
-        if reutil._find_digit_only.search(o[0:o.find(' ')]):
+        #if reutil._find_digit_only.search(o[0:o.find(' ')]):
+        if re.search("ID|EXT|RESOLUTION", o):
+            skip_comment += 2
             break
         skip_comment += 1
      
     #formats = output[skip_comment:]
 
-    #formats = [o.replace('|','') for o in output[skip_comment:]]
-    formats = [re.sub('[|~]','', o) for o in output[skip_comment:]]
-    
+    formats = [re.sub('≈~│\[.*\]','', o) for o in output[skip_comment:]]
+
     if not reutil._find_valid_string.findall(formats[-1]):
         del formats[-1]
     

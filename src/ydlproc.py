@@ -62,6 +62,15 @@ class ProcessController(QObject):
             return
         
         self.nproc -= 1
+        #if reutil._find_ydl_error(self.data):
+        #    proc.error = True
+        #    proc.status = "=> Error(ProcessController)\n"\
+        #                  "... read_data (_find_ydl_error)\n"\
+        #                  "... [%s] : %s\n"%\
+        #                  (key,self.data)
+        #    self.status_changed.emit(proc)
+        #    return
+            
         if not self.proc_pool[key].file_exist and\
            not self.proc_pool[key].error:
             self.proc_pool[key].status = "finished"
@@ -79,9 +88,9 @@ class ProcessController(QObject):
         
     def read_data(self, key):
         proc = self.proc_pool[key]
-        data = None
+        self.data = None
         try:
-            data = str(proc.readLine(), ydlconf.get_encoding())
+            self.data = str(proc.readLine(), ydlconf.get_encoding())
             #data = str(proc.readLine(), 'cp949') # For Windows
             #data = str(proc.readLine(), 'utf-8') 
         except Exception as e:
@@ -90,29 +99,29 @@ class ProcessController(QObject):
                           "... read_data (proc.readLine)\n"\
                           "... [%s] : %s\n... %s"%\
                           (key, reutil._exception_msg(e), 
-                          data if data else "No data received")
+                          self.data if self.data else "No data received")
             proc.step = 100
             self.status_changed.emit(proc)
             return
             
-        if reutil._find_ydl_error(data):
+        if reutil._find_ydl_error(self.data):
             proc.error = True
             proc.status = "=> Error(ProcessController)\n"\
                           "... read_data (_find_ydl_error)\n"\
                           "... [%s] : %s\n"%\
-                          (key,data)
+                          (key,self.data)
             proc.step = 100
             self.status_changed.emit(proc)
             return
             
-        if reutil._file_exist(data):
+        if reutil._file_exist(self.data):
             proc.file_exist = True
             proc.status = "already exist"
             proc.step = 100
             self.status_changed.emit(proc)
             return
                        
-        match = reutil._find_percent.search(data)
+        match = reutil._find_percent.search(self.data)
         if match:
             proc.step = int(float(match.group(0)[:-1]))
 
