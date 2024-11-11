@@ -34,7 +34,7 @@ class QCreateVideoListFromURL(QObject):
     
     def __init__(self, url, pmsg):
         super(QCreateVideoListFromURL, self).__init__()
-        self._video_list = list()
+        self._video_list = []
         self._proc = None
         self._cur_sequence = 0
         self._video_count = 0

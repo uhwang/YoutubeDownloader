@@ -242,8 +242,8 @@ class ProcessTracker(QDialog):
     status_changed = pyqtSignal(int)
     
     #def __init__(self, proc_ctrl, msg):  # modal
+    #   super(ProcessTracker, self).__init__() # modal
     def __init__(self, parent, proc_ctrl, msg): # modaless/non-modal
-        #super(ProcessTracker, self).__init__() # modal
         QDialog.__init__(self, parent) # non-modal
         self.setModal(0) # non-modal
         self.proc_ctrl = proc_ctrl
